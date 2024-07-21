@@ -1,0 +1,29 @@
+{
+  "name": "pos-moredan",
+  "version": "1.0.0",
+  "description": "POS for moredan",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boey6172/pos-moredan.git"
+  },
+  "author": "Daniel Meynard Mabunga",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/boey6172/pos-moredan/issues"
+  },
+  "homepage": "https://github.com/boey6172/pos-moredan#readme",
+  "dependencies": {
+    "express": "^4.19.2",
+    "mariadb": "^3.3.1",
+    "mysql2": "^3.10.3",
+    "sequelize": "^6.37.3",
+    "sequelize-auto": "^0.8.8"
+  },
+  "devDependencies": {
+    "sequelize-cli": "^6.6.2"
+  }
+}
