@@ -4,12 +4,12 @@ const path = require('path');
 
 exports.createProduct = async (req, res) => {
   try {
-    const { name, price, sku, inventory, categoryId } = req.body;
+    const { name, price, sku, inventory, categoryId, costToMake } = req.body;
     let image = null;
     if (req.file) {
       image = '/uploads/' + req.file.filename;
     }
-    const product = await Product.create({ name, price, sku, inventory, categoryId, image });
+    const product = await Product.create({ name, price, sku, inventory, categoryId, image, costToMake });
     res.status(201).json(product);
   } catch (err) {
     res.status(500).json({ message: 'Failed to create product', error: err.message });
@@ -37,7 +37,7 @@ exports.getProductById = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   try {
-    const { name, price, sku, inventory, categoryId } = req.body;
+    const { name, price, sku, inventory, categoryId, costToMake } = req.body;
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     if (req.file) {
@@ -48,6 +48,7 @@ exports.updateProduct = async (req, res) => {
     product.sku = sku ?? product.sku;
     product.inventory = inventory ?? product.inventory;
     product.categoryId = categoryId ?? product.categoryId;
+    product.costToMake = costToMake ?? product.costToMake;
     await product.save();
     res.json(product);
   } catch (err) {

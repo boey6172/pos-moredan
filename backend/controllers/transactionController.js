@@ -7,7 +7,7 @@ const { Sequelize } = require('sequelize');
 exports.createTransaction = async (req, res) => {
   const t = await Transaction.sequelize.transaction();
   try {
-    const { items, discount = 0, mop } = req.body;
+    const { items, discount = 0, mop, customerName } = req.body;
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'No items provided.' });
     }
@@ -24,6 +24,7 @@ exports.createTransaction = async (req, res) => {
       discount,
       mop,
       cashierId: req.user.id,
+      customerName
     }, { transaction: t });
     for (const item of items) {
       const product = await Product.findByPk(item.productId);

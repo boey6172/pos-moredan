@@ -46,7 +46,7 @@ const Login = () => {
             margin="normal"
             required
           />
-          {error && <Typography color="error" variant="body2">{error}</Typography>}
+          {error && <Typography color="error" variant="body2">{error.message || error}</Typography>}
           <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
             Login
           </Button>

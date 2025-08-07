@@ -5,6 +5,8 @@ import axios from '../api/axios';
 
 const POS = () => {
   const [products, setProducts] = useState([]);
+  const [customerName, setCustomerName] = useState('');
+  const [nameDialogOpen, setNameDialogOpen] = useState(true);
   const [cart, setCart] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -43,7 +45,8 @@ const POS = () => {
       const res = await axios.post('/api/transactions', {
         items: cart.map(item => ({ productId: item.id, quantity: item.quantity })),
         discount: 0,
-        mop
+        mop,
+        customerName
       }, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
       setCheckoutStatus('success');
       setLastReceipt({
@@ -53,10 +56,30 @@ const POS = () => {
         transactionId: res.data.transactionId,
         mop
       });
+      
+      // Reset all data
       setCart([]);
+      setCustomerName('');
+      setMOP('Cash');
+      setDrawerOpen(false);
+      setCheckoutOpen(false);
+      
+      // Show receipt first, then customer name modal
       setReceiptOpen(true);
     } catch (err) {
       setCheckoutStatus(err.response?.data?.message || 'Checkout failed');
+    }
+  };
+
+  const handleReceiptClose = () => {
+    setReceiptOpen(false);
+    // After closing receipt, show customer name modal for next transaction
+    setNameDialogOpen(true);
+  };
+
+  const handleCustomerNameSubmit = () => {
+    if (customerName.trim()) {
+      setNameDialogOpen(false);
     }
   };
 
@@ -91,7 +114,7 @@ const POS = () => {
                   sx={{ mt: 1 }}
                   fullWidth
                 >
-                  Add to Cart
+                  Add to Checkout
                 </Button>
               </CardContent>
             </Card>
@@ -156,8 +179,34 @@ const POS = () => {
         onClick={() => setDrawerOpen(true)}
         startIcon={<AddShoppingCartIcon />}
       >
-        Cart ({cart.length})
+        Checkout ({cart.length})
       </Button>
+      <Dialog open={nameDialogOpen} onClose={() => {}} maxWidth="xs" fullWidth>
+        <DialogTitle>Enter Customer Name</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Customer Name"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            fullWidth
+            autoFocus
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && customerName.trim()) {
+                handleCustomerNameSubmit();
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCustomerNameSubmit}
+            variant="contained"
+            disabled={!customerName.trim()}
+          >
+            Proceed
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Checkout Dialog */}
       <Dialog open={checkoutOpen} onClose={() => setCheckoutOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Checkout</DialogTitle>
@@ -176,7 +225,7 @@ const POS = () => {
         </DialogActions>
       </Dialog>
       {/* Receipt Dialog */}
-      <Dialog open={receiptOpen} onClose={() => setReceiptOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={receiptOpen} onClose={handleReceiptClose} maxWidth="xs" fullWidth>
         <DialogTitle>Receipt</DialogTitle>
         <DialogContent ref={receiptRef}>
           {lastReceipt && (
@@ -197,7 +246,7 @@ const POS = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReceiptOpen(false)}>Close</Button>
+          <Button onClick={handleReceiptClose}>Close</Button>
           <Button onClick={handlePrint} variant="contained">Print</Button>
         </DialogActions>
       </Dialog>

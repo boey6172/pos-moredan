@@ -101,6 +101,7 @@ const Products = () => {
           <TextField select label="Category" value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))} fullWidth margin="normal">
             {categories.map(cat => <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>)}
           </TextField>
+          <TextField label="Cost to Make" type="number" value={form.costToMake} onChange={e => setForm(f => ({ ...f, costToMake: e.target.value }))} fullWidth margin="normal" />
           <Button component="label" fullWidth sx={{ mt: 1 }}>
             Upload Image
             <input type="file" hidden accept="image/*" onChange={e => setForm(f => ({ ...f, image: e.target.files[0] }))} />

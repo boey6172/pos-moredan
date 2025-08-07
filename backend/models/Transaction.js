@@ -22,6 +22,10 @@ const Transaction = sequelize.define('Transaction', {
     allowNull: false,
     defaultValue: 'Cash'
   },
+  customerName: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   cashierId: {
     type: DataTypes.INTEGER,
     allowNull: false,

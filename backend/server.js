@@ -15,7 +15,7 @@ const sequelize = require('./config/database');
 const helmet = require('helmet');
 
 app.use(cors({
-  origin: 'http://localhost:3000' // Replace with your frontend's origin
+  origin: '*' // Replace with your frontend's origin
 }));
 app.use(helmet());
 app.use(express.json());
@@ -40,7 +40,7 @@ app.get('/', (req, res) => {
 });
 sequelize.sync()
   .then(() => {
-    app.listen(5000, () => console.log('Server running on port 5000'));
+    app.listen(5000,'0.0.0.0', () => console.log('Server running on port 5000'));
   })
   .catch((err) => {
     console.error('Failed to sync database:', err);

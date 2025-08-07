@@ -2,6 +2,7 @@ const Transaction = require('../models/Transaction');
 const TransactionItem = require('../models/TransactionItem');
 const Product = require('../models/Product');
 const { Sequelize } = require('sequelize');
+const sequelize = require('../config/database');
 
 exports.getSalesReport = async (req, res) => {
   try {
@@ -30,18 +31,48 @@ exports.getSalesReport = async (req, res) => {
 exports.getTopProducts = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 5;
-    const topProducts = await TransactionItem.findAll({
-      attributes: [
-        'productId',
-        [Sequelize.fn('SUM', Sequelize.col('quantity')), 'totalSold']
-      ],
-      include: [{ model: Product }],
-      group: ['productId', 'Product.id'],
-      order: [[Sequelize.literal('totalSold'), 'DESC']],
-      limit
+    
+    // Use a raw query to ensure proper column naming
+    const topProductsData = await sequelize.query(`
+      SELECT 
+        ti."productId",
+        SUM(ti.quantity) as "totalSold"
+      FROM "TransactionItems" ti
+      GROUP BY ti."productId"
+      ORDER BY "totalSold" DESC
+      LIMIT :limit
+    `, {
+      replacements: { limit },
+      type: Sequelize.QueryTypes.SELECT
     });
-    res.json(topProducts);
+
+    // Then get the product details for these top products
+    const productIds = topProductsData.map(item => item.productId);
+    const products = await Product.findAll({
+      where: { id: productIds },
+      attributes: ['id', 'name', 'sku', 'inventory', 'price'],
+      raw: true
+    });
+
+    // Combine the data
+    const formattedProducts = topProductsData.map(item => {
+      const product = products.find(p => p.id === item.productId);
+      return {
+        productId: item.productId,
+        totalSold: parseInt(item.totalSold || 0),
+        Product: product ? {
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          inventory: product.inventory,
+          price: product.price
+        } : null
+      };
+    });
+
+    res.json(formattedProducts);
   } catch (err) {
+    console.error('Error in getTopProducts:', err);
     res.status(500).json({ message: 'Failed to fetch top products', error: err.message });
   }
 };

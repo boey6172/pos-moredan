@@ -30,6 +30,11 @@ const Product = sequelize.define('Product', {
     allowNull: false,
     defaultValue: 0,
   },
+  costToMake: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
   categoryId: {
     type: DataTypes.INTEGER,
     references: {
