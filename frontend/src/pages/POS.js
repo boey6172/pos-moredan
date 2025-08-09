@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Box, Grid, Card, CardMedia, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField } from '@mui/material';
+import { Box, Grid, Card, CardMedia, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField, Accordion, AccordionSummary, AccordionDetails, Snackbar, Zoom, Grow } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from '../api/axios';
+import { useNavigate } from 'react-router-dom';
 
 const POS = () => {
   const [products, setProducts] = useState([]);
@@ -14,7 +18,11 @@ const POS = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
   const [mop, setMOP] = useState('Cash');
+  const [addedToCartProductId, setAddedToCartProductId] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [addedProductName, setAddedProductName] = useState('');
   const receiptRef = useRef();
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get('/api/products', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
@@ -30,14 +38,37 @@ const POS = () => {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    // setDrawerOpen(true);
+    
+    // Trigger animation and notification
+    setAddedToCartProductId(product.id);
+    setAddedProductName(product.name);
+    setSnackbarOpen(true);
+    
+    // Reset animation after delay
+    setTimeout(() => {
+      setAddedToCartProductId(null);
+    }, 1000);
   };
 
   const changeQuantity = (id, delta) => {
     setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item));
   };
 
+  const removeFromCart = (id) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Group products by category
+  const groupedProducts = products.reduce((acc, product) => {
+    const categoryName = product.Category?.name || 'Uncategorized';
+    if (!acc[categoryName]) {
+      acc[categoryName] = [];
+    }
+    acc[categoryName].push(product);
+    return acc;
+  }, {});
 
   const handleCheckout = async () => {
     setCheckoutStatus(null);
@@ -94,33 +125,84 @@ const POS = () => {
   return (
     <Box p={2}>
       <Typography variant="h4" mb={2}>Point of Sale</Typography>
-      <Grid container spacing={2}>
-        {products.map(product => (
-          <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
-            <Card>
-              <CardMedia
-                component="img"
-                height="140"
-                image={product.image ? `http://localhost:5000${product.image}` : '/logo.svg'}
-                alt={product.name || 'Product Image'}
-              />
-              <CardContent>
-                <Typography variant="h6">{product.name}</Typography>
-                <Typography color="text.secondary">{product.price}</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddShoppingCartIcon />}
-                  onClick={() => addToCart(product)}
-                  sx={{ mt: 1 }}
-                  fullWidth
-                >
-                  Add to Checkout
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {Object.entries(groupedProducts).map(([categoryName, categoryProducts]) => (
+        <Accordion key={categoryName} defaultExpanded sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="h6">{categoryName} ({categoryProducts.length} items)</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              {categoryProducts.map(product => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
+                  <Grow in={true} timeout={300}>
+                    <Card 
+                      sx={{
+                        transform: addedToCartProductId === product.id ? 'scale(1.05)' : 'scale(1)',
+                        transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                        boxShadow: addedToCartProductId === product.id ? '0 8px 25px rgba(76, 175, 80, 0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                        border: addedToCartProductId === product.id ? '2px solid #4CAF50' : '2px solid transparent',
+                        position: 'relative',
+                        overflow: 'visible'
+                      }}
+                    >
+                      {addedToCartProductId === product.id && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: -10,
+                            right: -10,
+                            zIndex: 10,
+                            animation: 'bounce 0.6s ease-in-out',
+                            '@keyframes bounce': {
+                              '0%, 20%, 50%, 80%, 100%': { transform: 'translateY(0)' },
+                              '40%': { transform: 'translateY(-10px)' },
+                              '60%': { transform: 'translateY(-5px)' }
+                            }
+                          }}
+                        >
+                          <CheckCircleIcon 
+                            sx={{ 
+                              color: '#4CAF50', 
+                              fontSize: 30,
+                              backgroundColor: 'white',
+                              borderRadius: '50%'
+                            }} 
+                          />
+                        </Box>
+                      )}
+                      <CardMedia
+                        component="img"
+                        height="140"
+                        image={product.image ? `http://localhost:5000${product.image}` : '/logo.svg'}
+                        alt={product.name || 'Product Image'}
+                      />
+                      <CardContent>
+                        <Typography variant="h6">{product.name}</Typography>
+                        <Typography color="text.secondary">₱{product.price}</Typography>
+                        <Button
+                          variant="contained"
+                          startIcon={<AddShoppingCartIcon />}
+                          onClick={() => addToCart(product)}
+                          sx={{ 
+                            mt: 1,
+                            backgroundColor: addedToCartProductId === product.id ? '#4CAF50' : '',
+                            '&:hover': {
+                              backgroundColor: addedToCartProductId === product.id ? '#45a049' : ''
+                            }
+                          }}
+                          fullWidth
+                        >
+                          {addedToCartProductId === product.id ? 'Added!' : 'Add to Checkout'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grow>
+                </Grid>
+              ))}
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      ))}
       <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <Box width={320} p={2}>
           <Typography variant="h6">Cart</Typography>
@@ -128,15 +210,66 @@ const POS = () => {
               {cart.map(item => (
                 <ListItem
                   key={item.id}
-                  secondaryAction={
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <IconButton onClick={() => changeQuantity(item.id, -1)}>-</IconButton>
-                      <Typography>{item.quantity}</Typography>
-                      <IconButton onClick={() => changeQuantity(item.id, 1)}>+</IconButton>
-                    </Box>
-                  }
+                  sx={{ 
+                    paddingLeft: 1,
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
                 >
-                  <ListItemText primary={item.name} secondary={`₱${item.price}`} />
+                  <IconButton 
+                    onClick={() => removeFromCart(item.id)}
+                    sx={{ 
+                      color: '#f44336',
+                      marginRight: 1,
+                      '&:hover': {
+                        backgroundColor: 'rgba(244, 67, 54, 0.1)'
+                      }
+                    }}
+                    size="small"
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                  <ListItemText 
+                    primary={item.name} 
+                    secondary={`₱${item.price}`}
+                    sx={{ flexGrow: 1 }}
+                  />
+                  <Box display="flex" alignItems="center" gap={1} sx={{ marginLeft: 1 }}>
+                    <IconButton 
+                      onClick={() => changeQuantity(item.id, -1)}
+                      size="small"
+                      sx={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.2)'
+                        }
+                      }}
+                    >
+                      -
+                    </IconButton>
+                    <Typography 
+                      sx={{ 
+                        minWidth: '20px', 
+                        textAlign: 'center',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {item.quantity}
+                    </Typography>
+                    <IconButton 
+                      onClick={() => changeQuantity(item.id, 1)}
+                      size="small"
+                      sx={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.2)'
+                        }
+                      }}
+                    >
+                      +
+                    </IconButton>
+                  </Box>
                 </ListItem>
               ))}
             </List>
@@ -157,7 +290,7 @@ const POS = () => {
             </TextField>
           </Box>
           <Box mt={2}>
-            <Typography variant="subtitle1">Total: {total.toFixed(2)}</Typography>
+            <Typography variant="subtitle1">Total: ₱{total.toFixed(2)}</Typography>
           </Box>
 
           <Button
@@ -198,6 +331,7 @@ const POS = () => {
           />
         </DialogContent>
         <DialogActions>
+          <Button onClick={() => navigate('/')}>Cancel</Button>
           <Button
             onClick={handleCustomerNameSubmit}
             variant="contained"
@@ -212,7 +346,7 @@ const POS = () => {
         <DialogTitle>Checkout</DialogTitle>
         <DialogContent>
           <Typography>Are you sure you want to checkout?</Typography>
-          <Typography mt={2}>Total: ${total.toFixed(2)}</Typography>
+          <Typography mt={2}>Total: ₱{total.toFixed(2)}</Typography>
           {checkoutStatus && (
             <Alert severity={checkoutStatus === 'success' ? 'success' : 'error'} sx={{ mt: 2 }}>
               {checkoutStatus === 'success' ? 'Checkout successful!' : checkoutStatus}
@@ -237,11 +371,11 @@ const POS = () => {
               <List>
                 {lastReceipt.items.map(item => (
                   <ListItem key={item.id}>
-                    <ListItemText primary={item.name} secondary={`Qty: ${item.quantity} x ${item.price} = ${(item.price * item.quantity).toFixed(2)}`} />
+                    <ListItemText primary={item.name} secondary={`Qty: ${item.quantity} x ₱${item.price} = ₱${(item.price * item.quantity).toFixed(2)}`} />
                   </ListItem>
                 ))}
               </List>
-              <Typography variant="subtitle1">Total: {lastReceipt.total.toFixed(2)}</Typography>
+              <Typography variant="subtitle1">Total: ₱{lastReceipt.total.toFixed(2)}</Typography>
             </Box>
           )}
         </DialogContent>
@@ -250,6 +384,31 @@ const POS = () => {
           <Button onClick={handlePrint} variant="contained">Print</Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Add to Cart Notification */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={2000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        TransitionComponent={Zoom}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity="success" 
+          sx={{ 
+            width: '100%',
+            '& .MuiAlert-icon': {
+              fontSize: '1.5rem'
+            }
+          }}
+          iconMapping={{
+            success: <CheckCircleIcon fontSize="inherit" />
+          }}
+        >
+          {addedProductName} added to checkout!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

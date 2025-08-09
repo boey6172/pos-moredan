@@ -127,10 +127,7 @@ const Reports = () => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount || 0);
+    return `₱${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatDate = (dateString) => {
@@ -141,7 +138,14 @@ const Reports = () => {
 
   const SalesReport = () => (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
         <Typography variant="h5">Sales Report</Typography>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Period</InputLabel>
@@ -157,12 +161,12 @@ const Reports = () => {
         </FormControl>
       </Box>
 
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3, height: 600, width: '100%' }}>
+      <Grid container spacing={{ xs: 2, md: 4 }}>
+        <Grid item xs={12} lg={8}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 400, md: 600 }, width: '100%' }}>
             <Typography variant="h6" mb={3}>Sales Trend</Typography>
             {salesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1000}>
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={salesData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="period" />
@@ -179,8 +183,8 @@ const Reports = () => {
             )}
           </Paper>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: 600 }}>
+        <Grid item xs={12} lg={4}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 'auto', md: 600 } }}>
             <Typography variant="h6" mb={3}>Summary</Typography>
             <Box>
               <Typography variant="h6" color="textSecondary" mb={2}>
@@ -202,26 +206,26 @@ const Reports = () => {
         </Grid>
       </Grid>
 
-      <Paper sx={{ mt: 4, p: 3 }}>
+      <Paper sx={{ mt: 4, p: { xs: 2, md: 3 } }}>
         <Typography variant="h6" mb={3}>Sales Data</Typography>
-        <TableContainer>
+        <TableContainer sx={{ overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Period</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Transactions</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Total Sales</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Average Sale</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Period</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Transactions</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Total Sales</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Average Sale</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {salesData.length > 0 ? (
                 salesData.map((item, index) => (
                   <TableRow key={index}>
-                    <TableCell sx={{ fontSize: '1rem' }}>{formatDate(item.period)}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{item.transactionCount || 0}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{formatCurrency(item.totalSales)}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatDate(item.period)}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{item.transactionCount || 0}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(item.totalSales)}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
                       {formatCurrency(item.transactionCount > 0 ? item.totalSales / item.transactionCount : 0)}
                     </TableCell>
                   </TableRow>
@@ -242,7 +246,14 @@ const Reports = () => {
 
   const TopProductsReport = () => (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
         <Typography variant="h5">Top Products</Typography>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Limit</InputLabel>
@@ -259,12 +270,12 @@ const Reports = () => {
         </FormControl>
       </Box>
 
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: 600 }}>
+      <Grid container spacing={{ xs: 2, md: 4 }}>
+        <Grid item xs={12} lg={6}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 400, md: 600 } }}>
             <Typography variant="h6" mb={3}>Top Products by Quantity Sold</Typography>
             {topProducts.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1000}>
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topProducts}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
@@ -281,11 +292,11 @@ const Reports = () => {
             )}
           </Paper>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3, height: 600 }}>
+        <Grid item xs={12} lg={6}>
+          <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 400, md: 600 } }}>
             <Typography variant="h6" mb={3}>Top Products Distribution</Typography>
             {topProducts.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={500}>
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={topProducts}
@@ -293,7 +304,7 @@ const Reports = () => {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={150}
+                    outerRadius="80%"
                     fill="#8884d8"
                     dataKey="totalSold"
                   >
@@ -313,25 +324,25 @@ const Reports = () => {
         </Grid>
       </Grid>
 
-      <Paper sx={{ mt: 4, p: 3 }}>
+      <Paper sx={{ mt: 4, p: { xs: 2, md: 3 } }}>
         <Typography variant="h6" mb={3}>Top Products Details</Typography>
-        <TableContainer>
+        <TableContainer sx={{ overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Product Name</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>SKU</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Quantity Sold</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Current Stock</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Product Name</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>SKU</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Quantity Sold</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Current Stock</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {topProducts.length > 0 ? (
                 topProducts.map((item) => (
                   <TableRow key={item.productId}>
-                    <TableCell sx={{ fontSize: '1rem' }}>{item.name}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{item.Product?.sku || 'N/A'}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{item.totalSold || 0}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{item.name}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{item.Product?.sku || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{item.totalSold || 0}</TableCell>
                     <TableCell>
                       <Chip 
                         label={item.Product?.inventory || 0} 
@@ -357,7 +368,14 @@ const Reports = () => {
 
   const LowStockReport = () => (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box 
+        display="flex" 
+        flexDirection={{ xs: 'column', sm: 'row' }}
+        justifyContent="space-between" 
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        gap={2}
+        mb={3}
+      >
         <Typography variant="h5">Low Stock Report</Typography>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Threshold</InputLabel>
@@ -374,27 +392,27 @@ const Reports = () => {
         </FormControl>
       </Box>
 
-      <Paper sx={{ p: 3 }}>
+      <Paper sx={{ p: { xs: 2, md: 3 } }}>
         <Typography variant="h6" mb={3}>Low Stock Products (≤ {lowStockThreshold})</Typography>
-        <TableContainer>
+        <TableContainer sx={{ overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Product Name</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>SKU</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Category</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Current Stock</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Price</TableCell>
-                <TableCell sx={{ fontSize: '1.1rem', fontWeight: 'bold' }}>Status</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Product Name</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>SKU</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Category</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Current Stock</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Price</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {lowStockProducts.length > 0 ? (
                 lowStockProducts.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell sx={{ fontSize: '1rem' }}>{product.name}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{product.sku}</TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{product.Category?.name || 'N/A'}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{product.name}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{product.sku}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{product.Category?.name || 'N/A'}</TableCell>
                     <TableCell>
                       <Chip 
                         label={product.inventory || 0} 
@@ -402,7 +420,7 @@ const Reports = () => {
                         size="medium"
                       />
                     </TableCell>
-                    <TableCell sx={{ fontSize: '1rem' }}>{formatCurrency(product.price)}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(product.price)}</TableCell>
                     <TableCell>
                       <Chip 
                         label={product.inventory === 0 ? 'Out of Stock' : 'Low Stock'} 
@@ -431,8 +449,8 @@ const Reports = () => {
   };
 
   return (
-    <Box p={4}>
-      <Typography variant="h3" mb={4}>Reports</Typography>
+    <Box p={{ xs: 2, md: 4 }}>
+      <Typography variant={{ xs: 'h4', md: 'h3' }} mb={4}>Reports</Typography>
       
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -441,7 +459,20 @@ const Reports = () => {
       )}
 
       <Paper sx={{ mb: 4 }}>
-        <Tabs value={activeTab} onChange={handleTabChange} aria-label="report tabs" sx={{ '& .MuiTab-root': { fontSize: '1.1rem', padding: '16px 24px' } }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange} 
+          aria-label="report tabs" 
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ 
+            '& .MuiTab-root': { 
+              fontSize: { xs: '0.9rem', md: '1.1rem' }, 
+              padding: { xs: '12px 16px', md: '16px 24px' },
+              minWidth: { xs: 'auto', md: '160px' }
+            } 
+          }}
+        >
           <Tab label="Sales Report" />
           <Tab label="Top Products" />
           <Tab label="Low Stock" />

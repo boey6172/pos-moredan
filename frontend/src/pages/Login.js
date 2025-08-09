@@ -18,7 +18,7 @@ const Login = () => {
       const res = await axios.post('/api/auth/login', { username, password });
       
       login(res.data);       // ✅ update auth context
-      navigate('/pos');      // ✅ redirect
+      navigate('/');      // ✅ redirect
     } catch (err) {
       setError(err || 'Login failed');
     }
