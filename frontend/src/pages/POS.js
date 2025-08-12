@@ -245,23 +245,26 @@ ReceiptDialog.propTypes = {
 /* ---------- CustomerNameDialog ---------- */
 const CustomerNameDialog = ({ open, name, setName, onProceed, onCancel }) => {
   const [inputValue, setInputValue] = useState(name);
-  const debouncedName = useDebounce(inputValue, 100);
-
-  // Update parent state with debounced value
-  useEffect(() => {
-    setName(debouncedName);
-  }, [debouncedName, setName]);
 
   // Reset input when dialog opens/closes
   useEffect(() => {
     setInputValue(name);
   }, [name, open]);
 
-  const handleKeyPress = useCallback((e) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
-      onProceed();
-    }
-  }, [inputValue, onProceed]);
+  const handleKeyPress = useCallback(
+    (e) => {
+      if (e.key === 'Enter' && inputValue.trim()) {
+        setName(inputValue.trim());
+        onProceed();
+      }
+    },
+    [inputValue, setName, onProceed]
+  );
+
+  const handleProceed = useCallback(() => {
+    setName(inputValue.trim());
+    onProceed();
+  }, [inputValue, setName, onProceed]);
 
   return (
     <Dialog open={open} onClose={() => {}} maxWidth="xs" fullWidth>
@@ -273,12 +276,16 @@ const CustomerNameDialog = ({ open, name, setName, onProceed, onCancel }) => {
           onChange={(e) => setInputValue(e.target.value)}
           fullWidth
           autoFocus
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress} // onKeyDown is more reliable than onKeyPress
         />
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Cancel</Button>
-        <Button onClick={onProceed} variant="contained" disabled={!inputValue.trim()}>
+        <Button
+          onClick={handleProceed}
+          variant="contained"
+          disabled={!inputValue.trim()}
+        >
           Proceed
         </Button>
       </DialogActions>
