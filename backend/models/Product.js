@@ -19,7 +19,7 @@ const Product = sequelize.define('Product', {
   sku: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
+    // unique: true,
   },
   image: {
     type: DataTypes.STRING,

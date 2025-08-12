@@ -30,6 +30,12 @@ const Products = () => {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState(null);
   const [form, setForm] = useState(emptyProduct);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  
+
+  const filteredProducts = categoryFilter
+  ? products.filter((p) => p.categoryId === categoryFilter)
+  : products;
 
   const fetchProducts = async () => {
     try {
@@ -122,10 +128,33 @@ const Products = () => {
   return (
     <Box p={2}>
       <Typography variant="h4" mb={2}>Products</Typography>
-      <Button variant="contained" color="primary" sx={{ mb: 2 }} onClick={() => handleOpen()}>
-        Add Product
-      </Button>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        {/* Left side: Add Product button */}
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() => handleOpen()}
+        >
+          Add Product
+        </Button>
 
+        {/* Right side: Category Filter */}
+        <TextField
+          select
+          label="Filter by Category"
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          sx={{ minWidth: 200 }}
+        >
+          <MenuItem value="">All Categories</MenuItem>
+          {categories.map((cat) => (
+            <MenuItem key={cat.id} value={cat.id}>
+              {cat.name}
+            </MenuItem>
+          ))}
+        </TextField>
+      </Box>
+   
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -139,7 +168,7 @@ const Products = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {products.map(product => (
+            {filteredProducts.map(product => (
               <ProductRow
                 key={product.id}
                 product={product}
