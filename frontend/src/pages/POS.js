@@ -251,20 +251,26 @@ const CustomerNameDialog = ({ open, name, setName, onProceed, onCancel }) => {
     setInputValue(name);
   }, [name, open]);
 
+  // Run onProceed AFTER name is updated
+  useEffect(() => {
+    if (name && open) {
+      console.log("✅ Updated name:", name);
+      onProceed();
+    }
+  }, [name]); // only runs when "name" changes
+
   const handleKeyPress = useCallback(
     (e) => {
-      if (e.key === 'Enter' && inputValue.trim()) {
+      if (e.key === "Enter" && inputValue.trim()) {
         setName(inputValue.trim());
-        onProceed();
       }
     },
-    [inputValue, setName, onProceed]
+    [inputValue, setName]
   );
 
   const handleProceed = useCallback(() => {
     setName(inputValue.trim());
-    onProceed();
-  }, [inputValue, setName, onProceed]);
+  }, [inputValue, setName]);
 
   return (
     <Dialog open={open} onClose={() => {}} maxWidth="xs" fullWidth>
@@ -292,6 +298,7 @@ const CustomerNameDialog = ({ open, name, setName, onProceed, onCancel }) => {
     </Dialog>
   );
 };
+
 
 CustomerNameDialog.propTypes = { 
   open: PropTypes.bool.isRequired, 
