@@ -15,8 +15,10 @@ const Transactions = () => {
   const [editTarget, setEditTarget] = useState(null);
   const [editedItems, setEditedItems] = useState([]);
   const [mop, setMOP] = useState('Cash');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const today = new Date().toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [newProductId, setNewProductId] = useState('');
 
@@ -163,6 +165,7 @@ const Transactions = () => {
               <TableCell>Date</TableCell>
               <TableCell>Customer Name</TableCell>
               <TableCell>Cashier</TableCell>
+              <TableCell>MOP</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Items</TableCell>
               <TableCell>Actions</TableCell>
@@ -174,6 +177,7 @@ const Transactions = () => {
                 <TableCell>{new Date(tx.createdAt).toLocaleString()}</TableCell>
                 <TableCell>{tx.customerName}</TableCell>
                 <TableCell>{tx.cashier?.username}</TableCell>
+                <TableCell>{tx.mop}</TableCell>
                 <TableCell>₱{parseFloat(tx.total || 0).toFixed(2)}</TableCell>
                 <TableCell>{tx.TransactionItems?.length}</TableCell>
                 <TableCell>

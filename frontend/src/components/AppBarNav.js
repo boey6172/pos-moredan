@@ -25,7 +25,7 @@ const AppBarNav = ({ onLogout }) => {
 
   return (
     <>
-      <AppBar position="static">
+      <AppBar position="sticky">
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={() => setOpen(true)}>
             <MenuIcon />

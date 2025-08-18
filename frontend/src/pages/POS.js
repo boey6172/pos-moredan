@@ -484,6 +484,8 @@ export default function POS() {
   const handleCustomerNameSubmit = useCallback(() => {
     if (customerName.trim()) {
       setNameDialogOpen(false);
+      setCheckoutStatus(null);
+
     }
   }, [customerName]);
 
@@ -528,7 +530,7 @@ export default function POS() {
       <Typography variant="h4" mb={2}>Point of Sale</Typography>
 
       {Object.entries(groupedProducts).map(([categoryName, categoryProducts]) => (
-        <Accordion key={categoryName} defaultExpanded sx={{ mb: 2 }}>
+        <Accordion key={categoryName}  sx={{ mb: 2 }}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography variant="h6">
               {categoryName} ({categoryProducts.length} items)
