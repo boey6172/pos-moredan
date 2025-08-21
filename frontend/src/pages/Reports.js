@@ -167,13 +167,27 @@ const Reports = () => {
             <Typography variant="h6" mb={3}>Sales Trend</Typography>
             {salesData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={salesData}>
+                <LineChart 
+                  layout="horizontal" 
+                  // width={600} 
+                  // height={400} 
+                  data={salesData} 
+                  // margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="period" />
-                  <YAxis />
+                  {/* Y axis is now categorical (periods on the left → right) */}
+                  <YAxis type="number" />
+                  {/* X axis is numeric (sales value) */}
+                  <XAxis  dataKey="period" type="category" />
                   <Tooltip formatter={(value) => formatCurrency(value)} />
                   <Legend />
-                  <Line type="monotone" dataKey="totalSales" stroke="#8884d8" name="Total Sales" strokeWidth={3} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="totalSales" 
+                    stroke="#8884d8" 
+                    name="Total Sales" 
+                    strokeWidth={3} 
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -214,6 +228,8 @@ const Reports = () => {
               <TableRow>
                 <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Period</TableCell>
                 <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Transactions</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Gcash Sales</TableCell>
+                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Cash Sales</TableCell>
                 <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Total Sales</TableCell>
                 <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>Average Sale</TableCell>
               </TableRow>
@@ -224,6 +240,8 @@ const Reports = () => {
                   <TableRow key={index}>
                     <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatDate(item.period)}</TableCell>
                     <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{item.transactionCount || 0}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(item.gcashSales)}</TableCell>
+                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(item.cashSales)}</TableCell>
                     <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>{formatCurrency(item.totalSales)}</TableCell>
                     <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
                       {formatCurrency(item.transactionCount > 0 ? item.totalSales / item.transactionCount : 0)}

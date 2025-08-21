@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField,
-  Accordion, AccordionSummary, AccordionDetails, Snackbar
+  Accordion, AccordionSummary, AccordionDetails, Snackbar, 
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -309,7 +309,7 @@ CustomerNameDialog.propTypes = {
 };
 
 /* ---------- SnackbarNotification ---------- */
-const SnackbarNotification = ({ open, onClose, message }) => (
+const SnackbarNotification = ({ open, onClose, message,severity }) => (
   <Snackbar 
     open={open} 
     autoHideDuration={2000} 
@@ -318,9 +318,9 @@ const SnackbarNotification = ({ open, onClose, message }) => (
   >
     <Alert 
       onClose={onClose} 
-      severity="success" 
       sx={{ width: '100%' }} 
       iconMapping={{ success: <CheckCircleIcon fontSize="inherit" /> }}
+      severity={severity} 
     >
       {message}
     </Alert>
@@ -352,6 +352,7 @@ export default function POS() {
   const [addedProductName, setAddedProductName] = useState('');
   const receiptRef = useRef(null);
   const navigate = useNavigate();
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success'); 
 
   /* Fetch products once - Fixed async useEffect */
   useEffect(() => {
@@ -387,38 +388,95 @@ export default function POS() {
   }, []);
 
   /* Memoized derived values */
+  const categoryOrder = [
+    "Buy 1 Take 1",
+    "Iced Coffee",
+    "Hot Coffee",
+    "Non Coffee",
+    "Freezy Series",
+    "Fruity Series",
+    "Fruit Shakes",
+    "Juice",
+    "Silog Meals",
+    "Pasta",
+    "Snacks",
+    "Pastries",
+    "Add Ons",
+    "Uncategorized" // fallback
+  ];
+  
   const groupedProducts = useMemo(() => {
-    return products.reduce((acc, product) => {
-      const categoryName = product.Category?.name || 'Uncategorized';
+    // group first
+    const groups = products.reduce((acc, product) => {
+      const categoryName = product.Category?.name || "Uncategorized";
       if (!acc[categoryName]) acc[categoryName] = [];
       acc[categoryName].push(product);
       return acc;
     }, {});
+  
+    // sort/group by fixed order
+    const orderedGroups = {};
+    categoryOrder.forEach(category => {
+      if (groups[category]) {
+        orderedGroups[category] = groups[category];
+      }
+    });
+  
+    // if some categories are not in categoryOrder, append them at the end
+    Object.keys(groups).forEach(category => {
+      if (!orderedGroups[category]) {
+        orderedGroups[category] = groups[category];
+      }
+    });
+  
+    return orderedGroups;
   }, [products]);
-
-  const total = useMemo(() => 
-    cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0), 
+  
+  const total = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+        0
+      ),
     [cart]
   );
 
   /* Handlers */
   const addToCart = useCallback((product) => {
+    if (!product.inventory || product.inventory <= 0) {
+      // Show "out of stock" response
+      setAddedProductName(`${product.name} out of stock`);
+      setSnackbarOpen(true);
+      setSnackbarSeverity('error')
+      setAddedToCartProductId(null); // no product actually added
+      return;
+    }
+  
     setCart(prev => {
       const found = prev.find(p => p.id === product.id);
       if (found) {
+        // check again if stock is enough
+        if ((found.quantity || 1) >= product.inventory) {
+          setAddedProductName(`${product.name} (No more stock available)`);
+          setSnackbarSeverity('error')
+          setSnackbarOpen(true);
+          return prev; // don’t increase
+        }
+  
         return prev.map(p => 
           p.id === product.id 
             ? { ...p, quantity: (p.quantity || 1) + 1 } 
             : p
         );
       }
+  
       return [...prev, { ...product, quantity: 1 }];
     });
-    
+  
     setAddedToCartProductId(product.id);
-    setAddedProductName(product.name);
+    setAddedProductName(`${product.name} added to checkout!`);
     setSnackbarOpen(true);
-    
+  
     const timer = setTimeout(() => setAddedToCartProductId(null), 900);
     return () => clearTimeout(timer);
   }, []);
@@ -622,7 +680,8 @@ export default function POS() {
       <SnackbarNotification 
         open={snackbarOpen} 
         onClose={() => setSnackbarOpen(false)} 
-        message={`${addedProductName} added to checkout!`} 
+        message={`${addedProductName}`} 
+        severity={`${snackbarSeverity}`} 
       />
     </Box>
   );

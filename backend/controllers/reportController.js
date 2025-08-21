@@ -16,11 +16,13 @@ exports.getSalesReport = async (req, res) => {
     const sales = await Transaction.findAll({
       attributes: [
         [Sequelize.fn('COUNT', Sequelize.col('id')), 'transactionCount'],
+        [Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN mop = 'Cash' THEN total ELSE 0 END`)), 'cashSales'],
+        [Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN mop = 'GCash' THEN total ELSE 0 END`)), 'gcashSales'],
         [Sequelize.fn('SUM', Sequelize.col('total')), 'totalSales'],
         [groupBy[0], 'period']
       ],
       group: groupBy,
-      order: [[groupBy[0], 'DESC']]
+      order: [[groupBy[0], 'ASC']]
     });
     res.json(sales);
   } catch (err) {
