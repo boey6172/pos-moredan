@@ -10,6 +10,7 @@ const transactionRoutes = require('./routes/transaction');
 const reportRoutes = require('./routes/report');
 const inventoryRoutes = require('./routes/inventory');
 const userRoutes = require('./routes/user');
+const startingCash = require('./routes/startingcash');
 const path = require('path');
 const sequelize = require('./config/database');
 const helmet = require('helmet');
@@ -31,6 +32,8 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/startingcash', startingCash);
+
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK' });

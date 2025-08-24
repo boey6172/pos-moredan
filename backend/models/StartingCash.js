@@ -8,7 +8,7 @@ const StartingCash = sequelize.define('StartingCash', {
     primaryKey: true,
   },
   starting: {
-    type: DataTypes.STRING,
+    type: DataTypes.INTEGER,
     allowNull: false,
     unique: true,
   },

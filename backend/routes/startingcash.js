@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const productController = require('../controllers/productController');
+const startingCashController = require('../controllers/startingCashController');
 const { authenticateJWT, authorizeRoles } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
-router.get('/', authenticateJWT, productController.getProducts);
-router.get('/:id', authenticateJWT, productController.getProductById);
-router.post('/', authenticateJWT, authorizeRoles('admin'), upload.single('image'), productController.createProduct);
-router.put('/:id', authenticateJWT, authorizeRoles('admin'), upload.single('image'), productController.updateProduct);
-router.delete('/:id', authenticateJWT, authorizeRoles('admin'), productController.deleteProduct);
+router.get('/', authenticateJWT, startingCashController.getStartingCash);
+router.get('/:date', authenticateJWT, startingCashController.getStartingCashByDate);
+router.get('/:id', authenticateJWT, startingCashController.getStartingCashById);
+router.post('/', authenticateJWT, authorizeRoles('admin'), startingCashController.createStartingCash);
+router.put('/:id', authenticateJWT, authorizeRoles('admin'), startingCashController.updateStartingCash);
+router.delete('/:id', authenticateJWT, authorizeRoles('admin'), startingCashController.deleteStartingCash);
 
 module.exports = router; 
