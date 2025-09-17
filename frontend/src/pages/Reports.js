@@ -161,12 +161,12 @@ const Reports = () => {
         </FormControl>
       </Box>
 
-      <Grid container spacing={{ xs: 2, md: 4 }}>
-        <Grid item xs={12} lg={8}>
+      <Grid container spacing={{ xs: 1, md: 12 }}>
+        <Grid item xs={12} lg={8} sx={{ width: '90%' }}>
           <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 400, md: 600 }, width: '100%' }}>
             <Typography variant="h6" mb={3}>Sales Trend</Typography>
             {salesData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" >
                 <LineChart 
                   layout="horizontal" 
                   // width={600} 
@@ -197,7 +197,7 @@ const Reports = () => {
             )}
           </Paper>
         </Grid>
-        <Grid item xs={12} lg={4}>
+        <Grid item xs={12} md={12} lg={4}>
           <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 'auto', md: 600 } }}>
             <Typography variant="h6" mb={3}>Summary</Typography>
             <Box>
