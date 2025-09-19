@@ -3,12 +3,14 @@ import PropTypes from 'prop-types';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField,
-  Accordion, AccordionSummary, AccordionDetails, Snackbar, 
+  Accordion, AccordionSummary, AccordionDetails, Snackbar, InputAdornment, Paper
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import SearchIcon from '@mui/icons-material/Search';
 import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -350,7 +352,10 @@ export default function POS() {
   const [addedToCartProductId, setAddedToCartProductId] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
+  const [barcodeInput, setBarcodeInput] = useState('');
+  const [barcodeSearching, setBarcodeSearching] = useState(false);
   const receiptRef = useRef(null);
+  const barcodeInputRef = useRef(null);
   const navigate = useNavigate();
   const [snackbarSeverity, setSnackbarSeverity] = useState('success'); 
 
@@ -386,6 +391,15 @@ export default function POS() {
       mounted = false; 
     };
   }, []);
+
+  /* Auto-focus barcode input when not in customer name dialog */
+  useEffect(() => {
+    if (!nameDialogOpen && barcodeInputRef.current) {
+      setTimeout(() => {
+        barcodeInputRef.current?.focus();
+      }, 100);
+    }
+  }, [nameDialogOpen]);
 
   /* Memoized derived values */
   const categoryOrder = [
@@ -564,6 +578,62 @@ export default function POS() {
     win.print();
   }, []);
 
+  /* Barcode search functionality */
+  const searchProductByBarcode = useCallback(async (barcode) => {
+    if (!barcode.trim()) return;
+    
+    setBarcodeSearching(true);
+    try {
+      const res = await axios.get(`/api/products/sku/${encodeURIComponent(barcode.trim())}`, { 
+        headers: authHeader() 
+      });
+      
+      if (res.data) {
+        // Check if product is already in cart
+        const existingItem = cart.find(item => item.id === res.data.id);
+        if (existingItem) {
+          // If already in cart, increase quantity
+          changeQuantity(res.data.id, 1);
+          setAddedProductName(`${res.data.name} quantity increased!`);
+        } else {
+          // Add new product to cart
+          addToCart(res.data);
+          setAddedProductName(`${res.data.name} added via barcode scan!`);
+        }
+        setBarcodeInput(''); // Clear input after successful scan
+        setSnackbarOpen(true);
+        setSnackbarSeverity('success');
+        
+        // Auto-open cart drawer to show added item
+        // if (!drawerOpen) {
+        //   setDrawerOpen(true);
+        // }
+      }
+    } catch (err) {
+      console.error('Barcode search failed', err);
+      const errorMessage = err.response?.status === 404 
+        ? `Product not found for barcode: ${barcode}` 
+        : 'Error searching for product. Please try again.';
+      setAddedProductName(errorMessage);
+      setSnackbarOpen(true);
+      setSnackbarSeverity('error');
+    } finally {
+      setBarcodeSearching(false);
+    }
+  }, [addToCart, cart, changeQuantity, drawerOpen]);
+
+  const handleBarcodeKeyPress = useCallback((e) => {
+    if (e.key === 'Enter' && barcodeInput.trim()) {
+      searchProductByBarcode(barcodeInput);
+    }
+  }, [barcodeInput, searchProductByBarcode]);
+
+  const handleBarcodeSubmit = useCallback(() => {
+    if (barcodeInput.trim()) {
+      searchProductByBarcode(barcodeInput);
+    }
+  }, [barcodeInput, searchProductByBarcode]);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -586,6 +656,55 @@ export default function POS() {
   return (
     <Box p={2}>
       <Typography variant="h4" mb={2}>Point of Sale</Typography>
+
+      {/* Barcode Scanner Input */}
+      <Paper elevation={2} sx={{ p: 2, mb: 3, backgroundColor: '#f5f5f5' }}>
+        <Typography variant="h6" mb={2} display="flex" alignItems="center" gap={1}>
+          <QrCodeScannerIcon color="primary" />
+          Barcode Scanner
+        </Typography>
+        <Box display="flex" gap={2} alignItems="center">
+          <TextField
+            ref={barcodeInputRef}
+            label="Scan or Enter Barcode"
+            value={barcodeInput}
+            onChange={(e) => setBarcodeInput(e.target.value)}
+            onKeyPress={handleBarcodeKeyPress}
+            fullWidth
+            placeholder="Scan barcode or enter SKU manually"
+            disabled={barcodeSearching}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <QrCodeScannerIcon />
+                </InputAdornment>
+              ),
+              endAdornment: barcodeSearching && (
+                <InputAdornment position="end">
+                  <Typography variant="caption" color="text.secondary">
+                    Searching...
+                  </Typography>
+                </InputAdornment>
+              )
+            }}
+            autoFocus
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleBarcodeSubmit}
+            disabled={!barcodeInput.trim() || barcodeSearching}
+            startIcon={<SearchIcon />}
+            sx={{ minWidth: 120 }}
+          >
+            {barcodeSearching ? 'Searching...' : 'Search'}
+          </Button>
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          💡 Connect your barcode scanner and scan directly, or manually enter the product SKU. 
+          The input field will automatically focus for quick scanning.
+        </Typography>
+      </Paper>
 
       {Object.entries(groupedProducts).map(([categoryName, categoryProducts]) => (
         <Accordion key={categoryName}  sx={{ mb: 2 }}>
