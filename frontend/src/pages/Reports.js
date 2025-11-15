@@ -18,7 +18,8 @@ import {
   Alert,
   CircularProgress,
   Tabs,
-  Tab
+  Tab,
+  TextField
 } from '@mui/material';
 import {
   BarChart,
@@ -47,6 +48,8 @@ const Reports = () => {
   // Sales Report State
   const [salesData, setSalesData] = useState([]);
   const [salesPeriod, setSalesPeriod] = useState('daily');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Top Products State
   const [topProducts, setTopProducts] = useState([]);
@@ -64,13 +67,13 @@ const Reports = () => {
     } else if (activeTab === 2) {
       fetchLowStock();
     }
-  }, [activeTab, salesPeriod, topProductsLimit, lowStockThreshold]);
+  }, [activeTab, salesPeriod, topProductsLimit, lowStockThreshold, startDate, endDate]);
 
   const fetchSalesReport = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get(`/api/reports/sales?period=${salesPeriod}`, {
+      const response = await axios.get(`/api/reports/sales?period=${salesPeriod}&startDate=${startDate}&endDate=${endDate}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       // Format the data for charts
@@ -148,6 +151,20 @@ const Reports = () => {
       >
         <Typography variant="h5">Sales Report</Typography>
         <FormControl sx={{ minWidth: 120 }}>
+          <TextField
+            label="Start Date"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            // InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            label="End Date"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            // InputLabelProps={{ shrink: true }}
+          />
           <InputLabel>Period</InputLabel>
           <Select
             value={salesPeriod}

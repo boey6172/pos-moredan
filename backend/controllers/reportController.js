@@ -7,6 +7,17 @@ const sequelize = require('../config/database');
 exports.getSalesReport = async (req, res) => {
   try {
     const period = req.query.period || 'daily';
+    const { startDate, endDate } = req.query; // Example: ?startDate=2025-10-01&endDate=2025-10-14
+
+    const where = {};
+    if (startDate && endDate) {
+      where.createdAt = { [Sequelize.Op.between]: [new Date(startDate), new Date(endDate)] };
+    } else if (startDate) {
+      where.createdAt = { [Sequelize.Op.gte]: new Date(startDate) };
+    } else if (endDate) {
+      where.createdAt = { [Sequelize.Op.lte]: new Date(endDate) };
+    }
+    console.log(where);
     let groupBy;
     if (period === 'daily') groupBy = [Sequelize.fn('DATE', Sequelize.col('createdAt'))];
     else if (period === 'weekly') groupBy = [Sequelize.fn('DATE_TRUNC', 'week', Sequelize.col('createdAt'))];
@@ -21,6 +32,7 @@ exports.getSalesReport = async (req, res) => {
         [Sequelize.fn('SUM', Sequelize.col('total')), 'totalSales'],
         [groupBy[0], 'period']
       ],
+      where,
       group: groupBy,
       order: [[groupBy[0], 'ASC']]
     });
