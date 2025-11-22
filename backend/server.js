@@ -11,6 +11,8 @@ const reportRoutes = require('./routes/report');
 const inventoryRoutes = require('./routes/inventory');
 const userRoutes = require('./routes/user');
 const startingCash = require('./routes/startingcash');
+const reconciliationRoutes = require('./routes/reconciliation');
+const dashboardRoutes = require('./routes/dashboard');
 const path = require('path');
 const sequelize = require('./config/database');
 const helmet = require('helmet');
@@ -33,6 +35,8 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/startingcash', startingCash);
+app.use('/api/reconciliation', reconciliationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 
 app.get('/api/health', (req, res) => {
