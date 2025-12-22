@@ -1,6 +1,7 @@
 const EndOfDayReconciliation = require('../models/EndOfDayReconciliation');
 const Transaction = require('../models/Transaction');
 const StartingCash = require('../models/StartingCash');
+const Expense = require('../models/Expense');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
 
@@ -48,8 +49,19 @@ exports.getTodayReconciliation = async (req, res) => {
       }
     });
 
+    // Get today's expenses
+    const todayExpenses = await Expense.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [today, endOfDay]
+        }
+      }
+    });
+
+    const totalExpenses = todayExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
-    const expectedCash = startingCashAmount + totalCashSales;
+    const expectedCash = startingCashAmount + totalCashSales - totalExpenses;
 
     // Check if already reconciled today
     const reconciliation = await EndOfDayReconciliation.findOne({
@@ -65,6 +77,7 @@ exports.getTodayReconciliation = async (req, res) => {
       totalNonCashSales,
       totalSales,
       totalTransactions,
+      totalExpenses,
       expectedCash,
       actualCash: reconciliation ? reconciliation.actualCash : null,
       cashDifference: reconciliation ? reconciliation.cashDifference : null,
@@ -130,8 +143,19 @@ exports.closeDay = async (req, res) => {
       }
     });
 
+    // Get today's expenses
+    const todayExpenses = await Expense.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [today, endOfDay]
+        }
+      }
+    });
+
+    const totalExpenses = todayExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
-    const expectedCash = startingCashAmount + totalCashSales;
+    const expectedCash = startingCashAmount + totalCashSales - totalExpenses;
     const actualCashAmount = parseFloat(actualCash || 0);
     const cashDifference = actualCashAmount - expectedCash;
 
@@ -144,6 +168,7 @@ exports.closeDay = async (req, res) => {
       totalCashSales,
       totalNonCashSales,
       totalTransactions: transactions.length,
+      totalExpenses,
       notes: notes || null,
       closedBy: req.user.id
     });

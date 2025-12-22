@@ -10,6 +10,7 @@ const navLinks = [
   { label: 'Categories', path: '/categories' },
   { label: 'Inventory', path: '/inventory' },
   { label: 'Transactions', path: '/transactions' },
+  { label: 'Expenses', path: '/expenses' },
   { label: 'Reports', path: '/reports' },
   { label: 'Users', path: '/users' },
 ];

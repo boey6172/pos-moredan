@@ -286,6 +286,24 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box>
+                      <Typography color="text.secondary" gutterBottom>
+                        Today's Expenses
+                      </Typography>
+                      <Typography variant="h5" color="error">
+                        {formatCurrency(metrics.today?.totalExpenses || 0)}
+                      </Typography>
+                    </Box>
+                    <AttachMoneyIcon color="error" sx={{ fontSize: 40 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
           </Grid>
 
           {/* Payment Methods Breakdown */}
@@ -353,19 +371,27 @@ export default function Dashboard() {
               </Box>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
                     <Typography color="text.secondary">Starting Cash</Typography>
                     <Typography variant="h6">{formatCurrency(metrics.cash?.startingCash || 0)}</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
                   <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
                     <Typography color="text.secondary">Cash Sales</Typography>
                     <Typography variant="h6">{formatCurrency(metrics.today?.cashSales || 0)}</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={3}>
+                  <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
+                    <Typography color="text.secondary">Expenses</Typography>
+                    <Typography variant="h6" color="error">
+                      -{formatCurrency(metrics.today?.totalExpenses || 0)}
+                    </Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={3}>
                   <Paper sx={{ p: 2, bgcolor: 'background.default' }}>
                     <Typography color="text.secondary">Expected Cash</Typography>
                     <Typography variant="h6">{formatCurrency(metrics.cash?.expectedCash || 0)}</Typography>
@@ -495,6 +521,9 @@ export default function Dashboard() {
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Cash Sales: {formatCurrency(metrics?.today?.cashSales || 0)}
+            </Typography>
+            <Typography variant="body2" color="error">
+              Expenses: -{formatCurrency(metrics?.today?.totalExpenses || 0)}
             </Typography>
             <Typography variant="h6" sx={{ mt: 1 }}>
               Expected Cash: {formatCurrency(metrics?.cash?.expectedCash || 0)}
