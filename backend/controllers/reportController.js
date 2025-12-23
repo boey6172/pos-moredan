@@ -3,6 +3,7 @@ const TransactionItem = require('../models/TransactionItem');
 const Product = require('../models/Product');
 const { Sequelize } = require('sequelize');
 const sequelize = require('../config/database');
+const { calculatePaymentMethodTotals } = require('../utils/paymentUtils');
 
 exports.getSalesReport = async (req, res) => {
   try {
@@ -17,25 +18,62 @@ exports.getSalesReport = async (req, res) => {
     } else if (endDate) {
       where.createdAt = { [Sequelize.Op.lte]: new Date(endDate) };
     }
-    console.log(where);
+    
     let groupBy;
     if (period === 'daily') groupBy = [Sequelize.fn('DATE', Sequelize.col('createdAt'))];
     else if (period === 'weekly') groupBy = [Sequelize.fn('DATE_TRUNC', 'week', Sequelize.col('createdAt'))];
     else if (period === 'monthly') groupBy = [Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('createdAt'))];
     else return res.status(400).json({ message: 'Invalid period' });
 
-    const sales = await Transaction.findAll({
-      attributes: [
-        [Sequelize.fn('COUNT', Sequelize.col('id')), 'transactionCount'],
-        [Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN mop = 'Cash' THEN total ELSE 0 END`)), 'cashSales'],
-        [Sequelize.fn('SUM', Sequelize.literal(`CASE WHEN mop = 'GCash' THEN total ELSE 0 END`)), 'gcashSales'],
-        [Sequelize.fn('SUM', Sequelize.col('total')), 'totalSales'],
-        [groupBy[0], 'period']
-      ],
+    // Get all transactions first to process payment methods
+    const transactions = await Transaction.findAll({
+      attributes: ['id', 'total', 'mop', 'createdAt'],
       where,
-      group: groupBy,
-      order: [[groupBy[0], 'ASC']]
+      order: [['createdAt', 'ASC']]
     });
+
+    // Group transactions by period and calculate payment method totals
+    const groupedData = {};
+    
+    transactions.forEach(tx => {
+      const txDate = new Date(tx.createdAt);
+      let periodKey;
+      
+      if (period === 'daily') {
+        periodKey = txDate.toISOString().split('T')[0];
+      } else if (period === 'weekly') {
+        const weekStart = new Date(txDate);
+        weekStart.setDate(txDate.getDate() - txDate.getDay());
+        periodKey = weekStart.toISOString().split('T')[0];
+      } else if (period === 'monthly') {
+        periodKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+      }
+      
+      if (!groupedData[periodKey]) {
+        groupedData[periodKey] = {
+          period: periodKey,
+          transactionCount: 0,
+          cashSales: 0,
+          gcashSales: 0,
+          totalSales: 0
+        };
+      }
+      
+      const totals = calculatePaymentMethodTotals(tx);
+      groupedData[periodKey].transactionCount += 1;
+      groupedData[periodKey].cashSales += totals.cash;
+      groupedData[periodKey].gcashSales += totals.gcash;
+      groupedData[periodKey].totalSales += parseFloat(tx.total || 0);
+    });
+
+    // Convert to array and format
+    const sales = Object.values(groupedData).map(item => ({
+      ...item,
+      cashSales: parseFloat(item.cashSales.toFixed(2)),
+      gcashSales: parseFloat(item.gcashSales.toFixed(2)),
+      totalSales: parseFloat(item.totalSales.toFixed(2))
+    }));
+
     res.json(sales);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch sales report', error: err.message });

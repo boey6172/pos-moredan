@@ -57,7 +57,13 @@ const Transactions = () => {
 
   const handleEditOpen = (tx) => {
     setEditTarget(tx);
-    setMOP(tx.modeOfPayment || 'Cash');
+    // Handle both old format (string) and new format (array)
+    if (tx.payments && Array.isArray(tx.payments) && tx.payments.length > 0) {
+      // For multi-payment, use the first payment method as default (or could show all)
+      setMOP(tx.payments[0].method || 'Cash');
+    } else {
+      setMOP(tx.mop || 'Cash');
+    }
     setEditedItems(
       tx.TransactionItems.map((item) => ({
         id: item.id,
@@ -177,7 +183,19 @@ const Transactions = () => {
                 <TableCell>{new Date(tx.createdAt).toLocaleString()}</TableCell>
                 <TableCell>{tx.customerName}</TableCell>
                 <TableCell>{tx.cashier?.username}</TableCell>
-                <TableCell>{tx.mop}</TableCell>
+                <TableCell>
+                  {tx.payments && Array.isArray(tx.payments) ? (
+                    <Box>
+                      {tx.payments.map((p, idx) => (
+                        <Typography key={idx} variant="caption" display="block">
+                          {p.method}: ₱{parseFloat(p.amount || 0).toFixed(2)}
+                        </Typography>
+                      ))}
+                    </Box>
+                  ) : (
+                    tx.mop || 'N/A'
+                  )}
+                </TableCell>
                 <TableCell>₱{parseFloat(tx.total || 0).toFixed(2)}</TableCell>
                 <TableCell>{tx.TransactionItems?.length}</TableCell>
                 <TableCell>
@@ -196,16 +214,35 @@ const Transactions = () => {
         <DialogTitle>Transaction Details</DialogTitle>
         <DialogContent>
           {selected && (
-            <List>
-              {selected.TransactionItems.map((item) => (
-                <ListItem key={item.id}>
-                  <ListItemText
-                    primary={`${item.Product?.name} (${item.Product?.Category?.name || 'Uncategorized'})`}
-                    secondary={`Qty: ${item.quantity} x ₱${parseFloat(item.price || 0).toFixed(2)} = ₱${(item.price * item.quantity).toFixed(2)}`}
-                  />
-                </ListItem>
-              ))}
-            </List>
+            <>
+              <List>
+                {selected.TransactionItems.map((item) => (
+                  <ListItem key={item.id}>
+                    <ListItemText
+                      primary={`${item.Product?.name} (${item.Product?.Category?.name || 'Uncategorized'})`}
+                      secondary={`Qty: ${item.quantity} x ₱${parseFloat(item.price || 0).toFixed(2)} = ₱${(item.price * item.quantity).toFixed(2)}`}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+              <Box mt={2}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>Payment Methods:</Typography>
+                {selected.payments && Array.isArray(selected.payments) ? (
+                  selected.payments.map((p, idx) => (
+                    <Typography key={idx} variant="body2" sx={{ ml: 2 }}>
+                      {p.method}: ₱{parseFloat(p.amount || 0).toFixed(2)}
+                    </Typography>
+                  ))
+                ) : (
+                  <Typography variant="body2" sx={{ ml: 2 }}>
+                    {selected.mop || 'N/A'}
+                  </Typography>
+                )}
+                <Typography variant="subtitle2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                  Total: ₱{parseFloat(selected.total || 0).toFixed(2)}
+                </Typography>
+              </Box>
+            </>
           )}
         </DialogContent>
       </Dialog>

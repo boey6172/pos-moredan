@@ -3,6 +3,7 @@ const Transaction = require('../models/Transaction');
 const StartingCash = require('../models/StartingCash');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
+const { getCashAmount, getNonCashAmount } = require('../utils/paymentUtils');
 
 // Get today's reconciliation data (for dashboard and closing)
 exports.getTodayReconciliation = async (req, res) => {
@@ -41,11 +42,9 @@ exports.getTodayReconciliation = async (req, res) => {
     transactions.forEach(tx => {
       const amount = parseFloat(tx.total || 0);
       totalSales += amount;
-      if (tx.mop === 'Cash') {
-        totalCashSales += amount;
-      } else {
-        totalNonCashSales += amount;
-      }
+      // Use utility functions to handle both single and multi-payment transactions
+      totalCashSales += getCashAmount(tx);
+      totalNonCashSales += getNonCashAmount(tx);
     });
 
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
@@ -122,12 +121,9 @@ exports.closeDay = async (req, res) => {
     let totalNonCashSales = 0;
 
     transactions.forEach(tx => {
-      const amount = parseFloat(tx.total || 0);
-      if (tx.mop === 'Cash') {
-        totalCashSales += amount;
-      } else {
-        totalNonCashSales += amount;
-      }
+      // Use utility functions to handle both single and multi-payment transactions
+      totalCashSales += getCashAmount(tx);
+      totalNonCashSales += getNonCashAmount(tx);
     });
 
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;

@@ -3,7 +3,8 @@ import PropTypes from 'prop-types';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField,
-  Accordion, AccordionSummary, AccordionDetails, Snackbar, InputAdornment, Paper
+  Accordion, AccordionSummary, AccordionDetails, Snackbar, InputAdornment, Paper,
+  Chip, Divider, RadioGroup, Radio, FormControlLabel, FormControl, FormLabel
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -11,6 +12,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import SearchIcon from '@mui/icons-material/Search';
+import AddIcon from '@mui/icons-material/Add';
 import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -98,68 +100,291 @@ ProductCard.propTypes = {
   addedToCartProductId: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
 };
 
-/* ---------- CartDrawer ---------- */
-const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, mop, setMOP, total, onCheckout }) => (
-  <Drawer anchor="right" open={open} onClose={onClose}>
-    <Box width={320} p={2}>
-      <Typography variant="h6">Cart</Typography>
-      <List>
-        {cart.length === 0 && <Typography sx={{ p: 2 }}>Cart is empty</Typography>}
-        {cart.map(item => (
-          <ListItem key={item.id} sx={{ paddingLeft: 1 }}>
-            <IconButton onClick={() => removeFromCart(item.id)} size="small" sx={{ color: '#f44336', mr: 1 }}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-            <ListItemText 
-              primary={item.name} 
-              secondary={`₱${Number(item.price || 0).toFixed(2)}`} 
-              sx={{ flexGrow: 1 }} 
-            />
-            <Box display="flex" alignItems="center" gap={1} sx={{ ml: 1 }}>
-              <IconButton onClick={() => changeQuantity(item.id, -1)} size="small">-</IconButton>
-              <Typography sx={{ minWidth: '24px', textAlign: 'center', fontWeight: 'bold' }}>
-                {item.quantity || 1}
-              </Typography>
-              <IconButton onClick={() => changeQuantity(item.id, 1)} size="small">+</IconButton>
-            </Box>
-          </ListItem>
-        ))}
-      </List>
+/* ---------- MultiPaymentManager Component ---------- */
+const MultiPaymentManager = ({ payments, setPayments, total }) => {
+  const [newMethod, setNewMethod] = useState('Cash');
+  const [newAmount, setNewAmount] = useState('');
+  const [error, setError] = useState('');
 
-      <Box mt={2}>
+  const paymentMethods = ['Cash', 'Card', 'GCash', 'PayMaya', 'Bank Transfer'];
+  const paidTotal = useMemo(() => 
+    payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0), 
+    [payments]
+  );
+  const remaining = total - paidTotal;
+
+  const addPayment = useCallback(() => {
+    const amount = parseFloat(newAmount);
+    if (!amount || amount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    if (paidTotal + amount > total) {
+      setError('Payment amount exceeds remaining balance');
+      return;
+    }
+    setPayments([...payments, { method: newMethod, amount }]);
+    setNewAmount('');
+    setError('');
+  }, [newMethod, newAmount, payments, paidTotal, total, setPayments]);
+
+  const removePayment = useCallback((index) => {
+    setPayments(payments.filter((_, i) => i !== index));
+  }, [payments, setPayments]);
+
+  const handleKeyPress = useCallback((e) => {
+    if (e.key === 'Enter' && newAmount) {
+      addPayment();
+    }
+  }, [newAmount, addPayment]);
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+        Payment Methods
+      </Typography>
+      
+      {payments.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          {payments.map((payment, index) => (
+            <Chip
+              key={index}
+              label={`${payment.method}: ₱${parseFloat(payment.amount).toFixed(2)}`}
+              onDelete={() => removePayment(index)}
+              sx={{ mr: 1, mb: 1 }}
+              color="primary"
+              variant="outlined"
+            />
+          ))}
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Paid: ₱{paidTotal.toFixed(2)} / Total: ₱{total.toFixed(2)}
+            </Typography>
+            {remaining > 0 && (
+              <Typography variant="caption" color="error" display="block">
+                Remaining: ₱{remaining.toFixed(2)}
+              </Typography>
+            )}
+            {remaining < 0 && (
+              <Typography variant="caption" color="error" display="block">
+                Overpaid: ₱{Math.abs(remaining).toFixed(2)}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      )}
+
+      <Divider sx={{ my: 1 }} />
+
+      <Box display="flex" gap={1} sx={{ mb: 1 }}>
         <TextField
           select
-          label="Mode of Payment"
-          value={mop}
-          onChange={(e) => setMOP(e.target.value)}
-          fullWidth
+          value={newMethod}
+          onChange={(e) => setNewMethod(e.target.value)}
+          size="small"
+          sx={{ flex: 1 }}
           SelectProps={{ native: true }}
         >
-          <option value="Cash">Cash</option>
-          <option value="Card">Card</option>
-          <option value="GCash">GCash</option>
-          <option value="PayMaya">PayMaya</option>
-          <option value="Bank Transfer">Bank Transfer</option>
+          {paymentMethods.map(method => (
+            <option key={method} value={method}>{method}</option>
+          ))}
         </TextField>
+        <TextField
+          type="number"
+          label="Amount"
+          value={newAmount}
+          onChange={(e) => {
+            setNewAmount(e.target.value);
+            setError('');
+          }}
+          onKeyPress={handleKeyPress}
+          size="small"
+          sx={{ flex: 1 }}
+          InputProps={{
+            startAdornment: <InputAdornment position="start">₱</InputAdornment>
+          }}
+          inputProps={{ min: 0, step: 0.01 }}
+        />
+        <IconButton 
+          onClick={addPayment} 
+          color="primary" 
+          disabled={!newAmount || parseFloat(newAmount) <= 0}
+          sx={{ border: '1px solid', borderColor: 'divider' }}
+        >
+          <AddIcon />
+        </IconButton>
       </Box>
 
-      <Box mt={2}>
-        <Typography variant="subtitle1">Total: ₱{total.toFixed(2)}</Typography>
-      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 1, py: 0 }}>{error}</Alert>
+      )}
 
-      <Button 
-        variant="contained" 
-        color="success" 
-        fullWidth 
-        sx={{ mt: 2 }} 
-        disabled={cart.length === 0} 
-        onClick={onCheckout}
-      >
-        Checkout
-      </Button>
+      {remaining === 0 && payments.length > 0 && (
+        <Alert severity="success" sx={{ mb: 1, py: 0 }}>
+          Payment complete!
+        </Alert>
+      )}
     </Box>
-  </Drawer>
-);
+  );
+};
+
+MultiPaymentManager.propTypes = {
+  payments: PropTypes.array.isRequired,
+  setPayments: PropTypes.func.isRequired,
+  total: PropTypes.number.isRequired
+};
+
+/* ---------- SinglePaymentSelector Component ---------- */
+const SinglePaymentSelector = ({ paymentMethod, setPaymentMethod, total }) => {
+  const paymentMethods = ['Cash', 'Card', 'GCash', 'PayMaya', 'Bank Transfer'];
+
+  return (
+    <Box>
+      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+        Payment Method
+      </Typography>
+      <TextField
+        select
+        value={paymentMethod}
+        onChange={(e) => setPaymentMethod(e.target.value)}
+        fullWidth
+        size="small"
+        SelectProps={{ native: true }}
+      >
+        {paymentMethods.map(method => (
+          <option key={method} value={method}>{method}</option>
+        ))}
+      </TextField>
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        Total: ₱{total.toFixed(2)}
+      </Typography>
+    </Box>
+  );
+};
+
+SinglePaymentSelector.propTypes = {
+  paymentMethod: PropTypes.string.isRequired,
+  setPaymentMethod: PropTypes.func.isRequired,
+  total: PropTypes.number.isRequired
+};
+
+/* ---------- CartDrawer ---------- */
+const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payments, setPayments, total, onCheckout, isMultiPayment, setIsMultiPayment, paymentMethod, setPaymentMethod }) => {
+  const paidTotal = useMemo(() => {
+    if (isMultiPayment) {
+      return payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    } else {
+      return paymentMethod ? total : 0;
+    }
+  }, [payments, isMultiPayment, paymentMethod, total]);
+  
+  const canCheckout = cart.length > 0 && (
+    isMultiPayment 
+      ? (paidTotal >= total && payments.length > 0)
+      : (paymentMethod && paidTotal >= total)
+  );
+
+  return (
+    <Drawer anchor="right" open={open} onClose={onClose}>
+      <Box width={380} p={2} sx={{ maxHeight: '100vh', overflowY: 'auto' }}>
+        <Typography variant="h6">Cart</Typography>
+        <List>
+          {cart.length === 0 && <Typography sx={{ p: 2 }}>Cart is empty</Typography>}
+          {cart.map(item => (
+            <ListItem key={item.id} sx={{ paddingLeft: 1 }}>
+              <IconButton onClick={() => removeFromCart(item.id)} size="small" sx={{ color: '#f44336', mr: 1 }}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+              <ListItemText 
+                primary={item.name} 
+                secondary={`₱${Number(item.price || 0).toFixed(2)}`} 
+                sx={{ flexGrow: 1 }} 
+              />
+              <Box display="flex" alignItems="center" gap={1} sx={{ ml: 1 }}>
+                <IconButton onClick={() => changeQuantity(item.id, -1)} size="small">-</IconButton>
+                <Typography sx={{ minWidth: '24px', textAlign: 'center', fontWeight: 'bold' }}>
+                  {item.quantity || 1}
+                </Typography>
+                <IconButton onClick={() => changeQuantity(item.id, 1)} size="small">+</IconButton>
+              </Box>
+            </ListItem>
+          ))}
+        </List>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Box mt={2} mb={2}>
+          <FormControl component="fieldset" fullWidth>
+            <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold', fontSize: '0.95rem' }}>
+              Payment Mode
+            </FormLabel>
+            <RadioGroup
+              row
+              value={isMultiPayment ? 'multi' : 'single'}
+              onChange={(e) => {
+                const isMulti = e.target.value === 'multi';
+                setIsMultiPayment(isMulti);
+                // Reset payments when switching modes
+                if (!isMulti) {
+                  setPayments([]);
+                }
+              }}
+              sx={{ display: 'flex', gap: 1 }}
+            >
+              <FormControlLabel 
+                value="single" 
+                control={<Radio size="small" />} 
+                label="Single" 
+                sx={{ flex: 1, mr: 0 }}
+              />
+              <FormControlLabel 
+                value="multi" 
+                control={<Radio size="small" />} 
+                label="Multi" 
+                sx={{ flex: 1, mr: 0 }}
+              />
+            </RadioGroup>
+          </FormControl>
+        </Box>
+
+        <Divider sx={{ my: 2 }} />
+
+        <Box mt={2}>
+          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+            Total: ₱{total.toFixed(2)}
+          </Typography>
+        </Box>
+
+        <Box mt={2}>
+          {isMultiPayment ? (
+            <MultiPaymentManager 
+              payments={payments} 
+              setPayments={setPayments} 
+              total={total} 
+            />
+          ) : (
+            <SinglePaymentSelector
+              paymentMethod={paymentMethod}
+              setPaymentMethod={setPaymentMethod}
+              total={total}
+            />
+          )}
+        </Box>
+
+        <Button 
+          variant="contained" 
+          color="success" 
+          fullWidth 
+          sx={{ mt: 2 }} 
+          disabled={!canCheckout} 
+          onClick={onCheckout}
+        >
+          Checkout
+        </Button>
+      </Box>
+    </Drawer>
+  );
+};
 
 CartDrawer.propTypes = {
   open: PropTypes.bool.isRequired,
@@ -167,10 +392,14 @@ CartDrawer.propTypes = {
   cart: PropTypes.array.isRequired,
   changeQuantity: PropTypes.func.isRequired,
   removeFromCart: PropTypes.func.isRequired,
-  mop: PropTypes.string.isRequired,
-  setMOP: PropTypes.func.isRequired,
+  payments: PropTypes.array.isRequired,
+  setPayments: PropTypes.func.isRequired,
   total: PropTypes.number.isRequired,
-  onCheckout: PropTypes.func.isRequired
+  onCheckout: PropTypes.func.isRequired,
+  isMultiPayment: PropTypes.bool.isRequired,
+  setIsMultiPayment: PropTypes.func.isRequired,
+  paymentMethod: PropTypes.string.isRequired,
+  setPaymentMethod: PropTypes.func.isRequired
 };
 
 /* ---------- CheckoutDialog ---------- */
@@ -213,7 +442,16 @@ const ReceiptDialog = ({ open, onClose, lastReceipt, onPrint }) => (
           <Typography variant="h6">Receipt</Typography>
           <Typography>Date: {lastReceipt.date}</Typography>
           <Typography>Transaction ID: {lastReceipt.transactionId}</Typography>
-          <Typography>Mode of Payment: {lastReceipt.mop}</Typography>
+          <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Payment Methods:</Typography>
+          {lastReceipt.payments && Array.isArray(lastReceipt.payments) ? (
+            lastReceipt.payments.map((payment, idx) => (
+              <Typography key={idx} sx={{ ml: 2 }}>
+                {payment.method}: ₱{parseFloat(payment.amount).toFixed(2)}
+              </Typography>
+            ))
+          ) : (
+            <Typography>Mode of Payment: {lastReceipt.mop || 'N/A'}</Typography>
+          )}
           <List>
             {lastReceipt.items.map(item => (
               <ListItem key={item.id}>
@@ -348,7 +586,9 @@ export default function POS() {
   const [checkoutStatus, setCheckoutStatus] = useState(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
-  const [mop, setMOP] = useState('Cash');
+  const [payments, setPayments] = useState([]);
+  const [isMultiPayment, setIsMultiPayment] = useState(false); // Default to single payment
+  const [paymentMethod, setPaymentMethod] = useState('Cash'); // Default payment method
   const [addedToCartProductId, setAddedToCartProductId] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
@@ -512,6 +752,28 @@ export default function POS() {
   const handleCheckout = useCallback(async () => {
     if (cart.length === 0) return;
     
+    let finalPayments = [];
+    let mopString = '';
+    
+    if (isMultiPayment) {
+      // Validate multi-payment
+      const paidTotal = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+      if (paidTotal < total) {
+        setCheckoutStatus('Payment amount is less than total. Please add more payments.');
+        return;
+      }
+      finalPayments = payments;
+      mopString = JSON.stringify(payments);
+    } else {
+      // Single payment mode
+      if (!paymentMethod) {
+        setCheckoutStatus('Please select a payment method.');
+        return;
+      }
+      finalPayments = [{ method: paymentMethod, amount: total }];
+      mopString = JSON.stringify(finalPayments);
+    }
+    
     setCheckoutStatus(null);
     
     try {
@@ -521,7 +783,7 @@ export default function POS() {
           quantity: item.quantity || 1 
         })),
         discount: 0,
-        mop,
+        mop: mopString,
         customerName
       }, { headers: authHeader() });
 
@@ -531,13 +793,15 @@ export default function POS() {
         total, 
         date: new Date().toLocaleString(), 
         transactionId: res.data.transactionId || res.data.id || 'N/A', 
-        mop 
+        payments: finalPayments 
       });
 
       // Reset for next transaction
       setCart([]);
       setCustomerName('');
-      setMOP('Cash');
+      setPayments([]);
+      setIsMultiPayment(false); // Reset to single payment
+      setPaymentMethod('Cash'); // Reset to default
       setDrawerOpen(false);
       setCheckoutOpen(false);
       setReceiptOpen(true);
@@ -546,7 +810,7 @@ export default function POS() {
       console.error('Checkout error', err);
       setCheckoutStatus(message);
     }
-  }, [cart, mop, customerName, total]);
+  }, [cart, payments, paymentMethod, isMultiPayment, customerName, total]);
 
   const handleReceiptClose = useCallback(() => {
     setReceiptOpen(false);
@@ -735,10 +999,14 @@ export default function POS() {
         cart={cart}
         changeQuantity={changeQuantity}
         removeFromCart={removeFromCart}
-        mop={mop}
-        setMOP={setMOP}
+        payments={payments}
+        setPayments={setPayments}
         total={total}
         onCheckout={() => { setCheckoutOpen(true); setDrawerOpen(false); }}
+        isMultiPayment={isMultiPayment}
+        setIsMultiPayment={setIsMultiPayment}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
       />
 
       <Button 
@@ -773,7 +1041,16 @@ export default function POS() {
             <Typography variant="h6">Receipt</Typography>
             <Typography>Date: {lastReceipt.date}</Typography>
             <Typography>Transaction ID: {lastReceipt.transactionId}</Typography>
-            <Typography>Mode of Payment: {lastReceipt.mop}</Typography>
+            <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Payment Methods:</Typography>
+            {lastReceipt.payments && Array.isArray(lastReceipt.payments) ? (
+              lastReceipt.payments.map((payment, idx) => (
+                <Typography key={idx} sx={{ ml: 2 }}>
+                  {payment.method}: ₱{parseFloat(payment.amount).toFixed(2)}
+                </Typography>
+              ))
+            ) : (
+              <Typography>Mode of Payment: {lastReceipt.mop || 'N/A'}</Typography>
+            )}
             <List>
               {lastReceipt.items.map(item => (
                 <ListItem key={item.id}>

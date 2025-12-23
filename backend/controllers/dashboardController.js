@@ -4,6 +4,7 @@ const StartingCash = require('../models/StartingCash');
 const EndOfDayReconciliation = require('../models/EndOfDayReconciliation');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
+const { calculatePaymentMethodTotals } = require('../utils/paymentUtils');
 
 // Get dashboard metrics
 exports.getDashboardMetrics = async (req, res) => {
@@ -45,15 +46,12 @@ exports.getDashboardMetrics = async (req, res) => {
       const amount = parseFloat(tx.total || 0);
       totalSales += amount;
       
-      if (tx.mop === 'Cash') {
-        cashSales += amount;
-      } else if (tx.mop === 'GCash') {
-        gcashSales += amount;
-      } else if (tx.mop === 'Card') {
-        cardSales += amount;
-      } else {
-        otherSales += amount;
-      }
+      // Use utility function to handle both single and multi-payment transactions
+      const totals = calculatePaymentMethodTotals(tx);
+      cashSales += totals.cash;
+      gcashSales += totals.gcash;
+      cardSales += totals.card;
+      otherSales += totals.other + totals.paymaya + totals.bankTransfer;
     });
 
     const totalTransactions = transactions.length;
@@ -71,16 +69,25 @@ exports.getDashboardMetrics = async (req, res) => {
     });
 
     // Get recent transactions (last 5)
+    const { parsePaymentMethods } = require('../utils/paymentUtils');
     const recentTransactions = transactions
       .slice(0, 5)
-      .map(tx => ({
-        id: tx.id,
-        customerName: tx.customerName,
-        total: parseFloat(tx.total || 0),
-        mop: tx.mop,
-        createdAt: tx.createdAt,
-        cashier: tx.cashier?.username || 'Unknown'
-      }));
+      .map(tx => {
+        const payments = parsePaymentMethods(tx.mop);
+        // Format payments: if it's new format (has amounts), return array; otherwise return null to use mop
+        const formattedPayments = payments && payments.length > 0 && payments[0].amount !== null 
+          ? payments 
+          : null;
+        return {
+          id: tx.id,
+          customerName: tx.customerName,
+          total: parseFloat(tx.total || 0),
+          mop: tx.mop, // Keep mop for backward compatibility
+          payments: formattedPayments,
+          createdAt: tx.createdAt,
+          cashier: tx.cashier?.username || 'Unknown'
+        };
+      });
 
     // Get sales by hour for today (for chart)
     const salesByHour = [];

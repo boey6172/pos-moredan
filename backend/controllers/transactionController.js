@@ -3,6 +3,50 @@ const TransactionItem = require('../models/TransactionItem');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const { Sequelize } = require('sequelize');
+const { parsePaymentMethods } = require('../utils/paymentUtils');
+
+/**
+ * Validate payment methods and calculate total
+ */
+const validatePayments = (payments, transactionTotal) => {
+  if (!Array.isArray(payments) || payments.length === 0) {
+    throw new Error('At least one payment method is required');
+  }
+  
+  let totalPaid = 0;
+  for (const payment of payments) {
+    if (!payment.method || typeof payment.method !== 'string') {
+      throw new Error('Each payment must have a valid method');
+    }
+    const amount = parseFloat(payment.amount);
+    if (isNaN(amount) || amount <= 0) {
+      throw new Error(`Invalid payment amount for ${payment.method}`);
+    }
+    totalPaid += amount;
+  }
+  
+  if (totalPaid < transactionTotal) {
+    throw new Error(`Total payments (₱${totalPaid.toFixed(2)}) is less than transaction total (₱${transactionTotal.toFixed(2)})`);
+  }
+  
+  return totalPaid;
+};
+
+/**
+ * Format payment methods for display
+ */
+const formatPaymentMethods = (mop) => {
+  const payments = parsePaymentMethods(mop);
+  if (!payments) return 'N/A';
+  
+  if (payments.length === 1 && payments[0].amount === null) {
+    // Old format
+    return payments[0].method;
+  }
+  
+  // New format: return array of payment objects
+  return payments;
+};
 
 exports.createTransaction = async (req, res) => {
   const t = await Transaction.sequelize.transaction();
@@ -19,10 +63,25 @@ exports.createTransaction = async (req, res) => {
       total += parseFloat(product.price) * item.quantity;
     }
     total = total - discount;
+    
+    // Validate payment methods if mop is JSON (new format)
+    let mopToStore = mop;
+    try {
+      const payments = JSON.parse(mop);
+      if (Array.isArray(payments) && payments.length > 0) {
+        // Validate payments for new format
+        validatePayments(payments, total);
+        mopToStore = mop; // Store as JSON string
+      }
+    } catch (e) {
+      // If not JSON, treat as old format (single string) - no validation needed
+      mopToStore = mop || 'Cash';
+    }
+    
     const transaction = await Transaction.create({
       total,
       discount,
-      mop,
+      mop: mopToStore,
       cashierId: req.user.id,
       customerName
     }, { transaction: t });
@@ -40,7 +99,15 @@ exports.createTransaction = async (req, res) => {
       await product.save({ transaction: t });
     }
     await t.commit();
-    res.status(201).json({ message: 'Transaction completed', transactionId: transaction.id, mop });
+    
+    // Return formatted payment info
+    const paymentInfo = formatPaymentMethods(mopToStore);
+    res.status(201).json({ 
+      message: 'Transaction completed', 
+      transactionId: transaction.id, 
+      mop: mopToStore,
+      payments: Array.isArray(paymentInfo) ? paymentInfo : null
+    });
   } catch (err) {
     await t.rollback();
     res.status(500).json({ message: 'Transaction failed', error: err.message });
@@ -64,7 +131,15 @@ exports.getTransactions = async (req, res) => {
       ],
       order: [['createdAt', 'DESC']]
     });
-    res.json(transactions);
+    
+    // Format payment methods for each transaction
+    const formattedTransactions = transactions.map(t => {
+      const transactionData = t.toJSON();
+      transactionData.payments = formatPaymentMethods(transactionData.mop);
+      return transactionData;
+    });
+    
+    res.json(formattedTransactions);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch transactions', error: err.message });
   }
@@ -79,7 +154,12 @@ exports.getTransactionById = async (req, res) => {
       ]
     });
     if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
-    res.json(transaction);
+    
+    // Format payment methods
+    const transactionData = transaction.toJSON();
+    transactionData.payments = formatPaymentMethods(transactionData.mop);
+    
+    res.json(transactionData);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch transaction', error: err.message });
   }
@@ -140,8 +220,22 @@ exports.updateTransaction = async (req, res) => {
       await product.save({ transaction: t });
     }
 
+    // Validate payment methods if mop is JSON (new format)
+    let mopToStore = mop;
+    try {
+      const payments = JSON.parse(mop);
+      if (Array.isArray(payments) && payments.length > 0) {
+        // Validate payments for new format
+        validatePayments(payments, newTotal);
+        mopToStore = mop; // Store as JSON string
+      }
+    } catch (e) {
+      // If not JSON, treat as old format (single string) - no validation needed
+      mopToStore = mop || 'Cash';
+    }
+
     transaction.total = newTotal;
-    transaction.mop = mop;
+    transaction.mop = mopToStore;
     await transaction.save({ transaction: t });
 
     await t.commit();

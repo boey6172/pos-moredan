@@ -462,7 +462,20 @@ export default function Dashboard() {
                           <TableCell>{tx.customerName}</TableCell>
                           <TableCell>{formatCurrency(tx.total)}</TableCell>
                           <TableCell>
-                            <Chip label={tx.mop} size="small" />
+                            {tx.payments && Array.isArray(tx.payments) ? (
+                              <Box>
+                                {tx.payments.map((p, idx) => (
+                                  <Chip 
+                                    key={idx} 
+                                    label={`${p.method}: ${formatCurrency(p.amount)}`} 
+                                    size="small" 
+                                    sx={{ mr: 0.5, mb: 0.5 }}
+                                  />
+                                ))}
+                              </Box>
+                            ) : (
+                              <Chip label={tx.mop || 'N/A'} size="small" />
+                            )}
                           </TableCell>
                           <TableCell>{tx.cashier}</TableCell>
                           <TableCell>
