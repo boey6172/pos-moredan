@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback, memo, startTransition } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box, Grid, Card, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText,
@@ -55,8 +55,13 @@ const bounce = keyframes`
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` });
 
 /* ---------- ProductCard ---------- */
-const ProductCard = ({ product, onAdd, addedToCartProductId }) => {
+const ProductCard = memo(({ product, onAdd, addedToCartProductId }) => {
   const isAdded = addedToCartProductId === product.id;
+  
+  // Memoize the click handler to prevent recreation on every render
+  const handleAdd = useCallback(() => {
+    onAdd(product);
+  }, [onAdd, product]);
 
   return (
     <Card
@@ -80,7 +85,7 @@ const ProductCard = ({ product, onAdd, addedToCartProductId }) => {
         <Button
           variant="contained"
           startIcon={<AddShoppingCartIcon />}
-          onClick={() => onAdd(product)}
+          onClick={handleAdd}
           fullWidth
           sx={{ mt: 1 }}
         >
@@ -89,7 +94,9 @@ const ProductCard = ({ product, onAdd, addedToCartProductId }) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 ProductCard.propTypes = {
   product: PropTypes.shape({
@@ -759,11 +766,13 @@ export default function POS() {
   /* Handlers */
   const addToCart = useCallback((product) => {
     if (!product.inventory || product.inventory <= 0) {
-      // Show "out of stock" response
-      setAddedProductName(`${product.name} out of stock`);
-      setSnackbarOpen(true);
-      setSnackbarSeverity('error')
-      setAddedToCartProductId(null); // no product actually added
+      // Batch state updates for better performance
+      startTransition(() => {
+        setAddedProductName(`${product.name} out of stock`);
+        setSnackbarSeverity('error');
+        setAddedToCartProductId(null);
+        setSnackbarOpen(true);
+      });
       return;
     }
   
@@ -772,10 +781,12 @@ export default function POS() {
       if (found) {
         // check again if stock is enough
         if ((found.quantity || 1) >= product.inventory) {
-          setAddedProductName(`${product.name} (No more stock available)`);
-          setSnackbarSeverity('error')
-          setSnackbarOpen(true);
-          return prev; // don’t increase
+          startTransition(() => {
+            setAddedProductName(`${product.name} (No more stock available)`);
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+          });
+          return prev; // don't increase
         }
   
         return prev.map(p => 
@@ -789,11 +800,17 @@ export default function POS() {
     });
   
     setAddedToCartProductId(product.id);
-    setAddedProductName(`${product.name} added to checkout!`);
-    setSnackbarOpen(true);
-  
-    const timer = setTimeout(() => setAddedToCartProductId(null), 900);
-    return () => clearTimeout(timer);
+    // Use startTransition for non-urgent UI updates (animations, notifications)
+    startTransition(() => {
+      setAddedProductName(`${product.name} added to checkout!`);
+      setSnackbarOpen(true);
+      setAddedToCartProductId(product.id);
+      
+      // Clear the added state after animation
+      setTimeout(() => {
+        setAddedToCartProductId(null);
+      }, 900);
+    });
   }, []);
 
   const changeQuantity = useCallback((id, delta) => {
@@ -993,7 +1010,12 @@ export default function POS() {
             ref={barcodeInputRef}
             label="Scan or Enter Barcode"
             value={barcodeInput}
-            onChange={(e) => setBarcodeInput(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              startTransition(() => {
+                setBarcodeInput(value);
+              });
+            }}
             onKeyPress={handleBarcodeKeyPress}
             fullWidth
             placeholder="Scan barcode or enter SKU manually"
