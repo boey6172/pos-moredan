@@ -13,6 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import axios from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -285,10 +286,58 @@ const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payme
   );
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box width={380} p={2} sx={{ maxHeight: '100vh', overflowY: 'auto' }}>
-        <Typography variant="h6">Cart</Typography>
-        <List>
+    <Drawer 
+      anchor="right" 
+      open={open} 
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: { xs: '100%', sm: 380 },
+          maxWidth: '100vw'
+        }
+      }}
+    >
+      <Box 
+        sx={{ 
+          width: '100%',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header with back button */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            p: 2, 
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            minHeight: 64
+          }}
+        >
+          <IconButton 
+            onClick={onClose} 
+            sx={{ mr: 1 }}
+            aria-label="close drawer"
+          >
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Cart
+          </Typography>
+        </Box>
+
+        {/* Scrollable content */}
+        <Box 
+          sx={{ 
+            flex: 1,
+            overflowY: 'auto',
+            p: 2
+          }}
+        >
+          <List>
           {cart.length === 0 && <Typography sx={{ p: 2 }}>Cart is empty</Typography>}
           {cart.map(item => (
             <ListItem key={item.id} sx={{ paddingLeft: 1 }}>
@@ -371,16 +420,28 @@ const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payme
           )}
         </Box>
 
-        <Button 
-          variant="contained" 
-          color="success" 
-          fullWidth 
-          sx={{ mt: 2 }} 
-          disabled={!canCheckout} 
-          onClick={onCheckout}
+        </Box>
+
+        {/* Fixed footer with checkout button */}
+        <Box 
+          sx={{ 
+            p: 2, 
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.paper'
+          }}
         >
-          Checkout
-        </Button>
+          <Button 
+            variant="contained" 
+            color="success" 
+            fullWidth 
+            disabled={!canCheckout} 
+            onClick={onCheckout}
+            size="large"
+          >
+            Checkout
+          </Button>
+        </Box>
       </Box>
     </Drawer>
   );
