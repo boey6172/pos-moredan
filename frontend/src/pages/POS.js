@@ -4,7 +4,7 @@ import {
   Box, Grid, Card, CardContent, Typography, Button, Drawer, List, ListItem, ListItemText,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Alert, TextField,
   Accordion, AccordionSummary, AccordionDetails, Snackbar, InputAdornment, Paper,
-  Chip, Divider, RadioGroup, Radio, FormControlLabel, FormControl, FormLabel
+  Chip, Divider, RadioGroup, Radio, FormControlLabel, FormControl, FormLabel, Switch
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -277,7 +277,7 @@ SinglePaymentSelector.propTypes = {
 };
 
 /* ---------- CartDrawer ---------- */
-const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payments, setPayments, total, onCheckout, isMultiPayment, setIsMultiPayment, paymentMethod, setPaymentMethod }) => {
+const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payments, setPayments, subtotal, total, discount, setDiscount, showDiscount, setShowDiscount, onCheckout, isMultiPayment, setIsMultiPayment, paymentMethod, setPaymentMethod }) => {
   const paidTotal = useMemo(() => {
     if (isMultiPayment) {
       return payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
@@ -369,6 +369,26 @@ const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payme
 
         <Divider sx={{ my: 2 }} />
 
+        {/* Discount Toggle */}
+        <Box mt={2} mb={2}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+              Enable Discount
+            </Typography>
+            <Switch
+              checked={showDiscount}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setShowDiscount(enabled);
+                if (!enabled) {
+                  setDiscount(0); // Reset discount when disabled
+                }
+              }}
+              size="small"
+            />
+          </Box>
+        </Box>
+
         <Box mt={2} mb={2}>
           <FormControl component="fieldset" fullWidth>
             <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold', fontSize: '0.95rem' }}>
@@ -406,9 +426,64 @@ const CartDrawer = ({ open, onClose, cart, changeQuantity, removeFromCart, payme
         <Divider sx={{ my: 2 }} />
 
         <Box mt={2}>
-          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-            Total: ₱{total.toFixed(2)}
-          </Typography>
+          <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Subtotal:
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              ₱{subtotal.toFixed(2)}
+            </Typography>
+          </Box>
+          
+          {showDiscount && (
+            <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1 }}>
+              <TextField
+                type="number"
+                label="Discount"
+                value={discount}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value) || 0;
+                  setDiscount(Math.max(0, Math.min(value, subtotal)));
+                }}
+                size="small"
+                sx={{ flex: 1 }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₱</InputAdornment>
+                }}
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+              <IconButton
+                size="small"
+                onClick={() => setDiscount(0)}
+                sx={{ border: '1px solid', borderColor: 'divider' }}
+                disabled={discount === 0}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          )}
+
+          {showDiscount && discount > 0 && (
+            <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="body2" color="error">
+                Discount:
+              </Typography>
+              <Typography variant="body2" color="error">
+                -₱{Number(discount).toFixed(2)}
+              </Typography>
+            </Box>
+          )}
+
+          <Divider sx={{ my: 1 }} />
+
+          <Box display="flex" justifyContent="space-between">
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+              Total:
+            </Typography>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+              ₱{total.toFixed(2)}
+            </Typography>
+          </Box>
         </Box>
 
         <Box mt={2}>
@@ -462,7 +537,12 @@ CartDrawer.propTypes = {
   removeFromCart: PropTypes.func.isRequired,
   payments: PropTypes.array.isRequired,
   setPayments: PropTypes.func.isRequired,
+  subtotal: PropTypes.number.isRequired,
   total: PropTypes.number.isRequired,
+  discount: PropTypes.number.isRequired,
+  setDiscount: PropTypes.func.isRequired,
+  showDiscount: PropTypes.bool.isRequired,
+  setShowDiscount: PropTypes.func.isRequired,
   onCheckout: PropTypes.func.isRequired,
   isMultiPayment: PropTypes.bool.isRequired,
   setIsMultiPayment: PropTypes.func.isRequired,
@@ -530,6 +610,20 @@ const ReceiptDialog = ({ open, onClose, lastReceipt, onPrint }) => (
               </ListItem>
             ))}
           </List>
+          {lastReceipt.subtotal !== undefined && (
+            <>
+              <Box sx={{ mt: 2, mb: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Subtotal: ₱{lastReceipt.subtotal.toFixed(2)}
+                </Typography>
+                {lastReceipt.discount > 0 && (
+                  <Typography variant="body2" color="error">
+                    Discount: -₱{lastReceipt.discount.toFixed(2)}
+                  </Typography>
+                )}
+              </Box>
+            </>
+          )}
           <Typography variant="subtitle1">Total: ₱{lastReceipt.total.toFixed(2)}</Typography>
         </Box>
       ) : (
@@ -657,6 +751,8 @@ export default function POS() {
   const [payments, setPayments] = useState([]);
   const [isMultiPayment, setIsMultiPayment] = useState(false); // Default to single payment
   const [paymentMethod, setPaymentMethod] = useState('Cash'); // Default payment method
+  const [discount, setDiscount] = useState(0); // Discount amount
+  const [showDiscount, setShowDiscount] = useState(false); // Show/hide discount field
   const [addedToCartProductId, setAddedToCartProductId] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
@@ -754,13 +850,18 @@ export default function POS() {
     return orderedGroups;
   }, [products]);
   
-  const total = useMemo(
+  const subtotal = useMemo(
     () =>
       cart.reduce(
         (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
         0
       ),
     [cart]
+  );
+
+  const total = useMemo(
+    () => Math.max(0, subtotal - Number(discount || 0)),
+    [subtotal, discount]
   );
 
   /* Handlers */
@@ -860,7 +961,7 @@ export default function POS() {
           productId: item.id, 
           quantity: item.quantity || 1 
         })),
-        discount: 0,
+        discount: parseFloat(discount) || 0,
         mop: mopString,
         customerName
       }, { headers: authHeader() });
@@ -868,6 +969,8 @@ export default function POS() {
       setCheckoutStatus('success');
       setLastReceipt({ 
         items: cart, 
+        subtotal,
+        discount: parseFloat(discount) || 0,
         total, 
         date: new Date().toLocaleString(), 
         transactionId: res.data.transactionId || res.data.id || 'N/A', 
@@ -878,6 +981,8 @@ export default function POS() {
       setCart([]);
       setCustomerName('');
       setPayments([]);
+      setDiscount(0); // Reset discount
+      setShowDiscount(false); // Hide discount field
       setIsMultiPayment(false); // Reset to single payment
       setPaymentMethod('Cash'); // Reset to default
       setDrawerOpen(false);
@@ -888,7 +993,7 @@ export default function POS() {
       console.error('Checkout error', err);
       setCheckoutStatus(message);
     }
-  }, [cart, payments, paymentMethod, isMultiPayment, customerName, total]);
+  }, [cart, payments, paymentMethod, isMultiPayment, customerName, total, discount]);
 
   const handleReceiptClose = useCallback(() => {
     setReceiptOpen(false);
@@ -1084,7 +1189,12 @@ export default function POS() {
         removeFromCart={removeFromCart}
         payments={payments}
         setPayments={setPayments}
+        subtotal={subtotal}
         total={total}
+        discount={discount}
+        setDiscount={setDiscount}
+        showDiscount={showDiscount}
+        setShowDiscount={setShowDiscount}
         onCheckout={() => { setCheckoutOpen(true); setDrawerOpen(false); }}
         isMultiPayment={isMultiPayment}
         setIsMultiPayment={setIsMultiPayment}
@@ -1144,6 +1254,20 @@ export default function POS() {
                 </ListItem>
               ))}
             </List>
+            {lastReceipt.subtotal !== undefined && (
+              <>
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Subtotal: ₱{lastReceipt.subtotal.toFixed(2)}
+                  </Typography>
+                  {lastReceipt.discount > 0 && (
+                    <Typography variant="body2" color="error">
+                      Discount: -₱{lastReceipt.discount.toFixed(2)}
+                    </Typography>
+                  )}
+                </Box>
+              </>
+            )}
             <Typography variant="subtitle1">Total: ₱{lastReceipt.total.toFixed(2)}</Typography>
           </Box>
         )}
