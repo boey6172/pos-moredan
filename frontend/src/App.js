@@ -10,6 +10,7 @@ import Categories from './pages/Categories';
 import Inventory from './pages/Inventory';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
+import SalesItems from './pages/SalesItems';
 import AppBarNav from './components/AppBarNav';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -29,6 +30,7 @@ function AppRoutes() {
         <Route path="/inventory" element={auth ? <Inventory /> : <Navigate to="/login" />} />
         <Route path="/expenses" element={auth ? <Expenses /> : <Navigate to="/login" />} />
         <Route path="/reports" element={auth ? <Reports /> : <Navigate to="/login" />} />
+        <Route path="/sales-items" element={auth ? <SalesItems /> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to={auth ? "/dashboard" : "/login"} />} />
       </Routes>
     </>
