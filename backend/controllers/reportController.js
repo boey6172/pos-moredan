@@ -1,6 +1,7 @@
 const Transaction = require('../models/Transaction');
 const TransactionItem = require('../models/TransactionItem');
 const Product = require('../models/Product');
+const Category = require('../models/Category');
 const { Sequelize } = require('sequelize');
 const sequelize = require('../config/database');
 const { calculatePaymentMethodTotals } = require('../utils/paymentUtils');
@@ -138,5 +139,100 @@ exports.getLowStock = async (req, res) => {
     res.json(lowStock);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch low stock products', error: err.message });
+  }
+};
+
+exports.getSalesItemsByCategory = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    // Build date filter for transactions
+    const transactionWhere = {};
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      transactionWhere.createdAt = { [Sequelize.Op.between]: [start, end] };
+    } else if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      transactionWhere.createdAt = { [Sequelize.Op.gte]: start };
+    } else if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      transactionWhere.createdAt = { [Sequelize.Op.lte]: end };
+    }
+
+    // Get all transaction items with product and category info, filtered by date
+    const salesItems = await TransactionItem.findAll({
+      include: [
+        {
+          model: Transaction,
+          where: transactionWhere,
+          required: true,
+          attributes: ['id', 'createdAt', 'customerName', 'mop']
+        },
+        {
+          model: Product,
+          required: true,
+          include: [
+            {
+              model: Category,
+              required: true,
+              attributes: ['id', 'name']
+            }
+          ],
+          attributes: ['id', 'name', 'sku', 'price']
+        }
+      ],
+      attributes: ['id', 'quantity', 'price', 'subtotal']
+    });
+
+    // Group by category
+    const groupedByCategory = {};
+    
+    salesItems.forEach(item => {
+      const categoryName = item.Product?.Category?.name || 'Uncategorized';
+      const categoryId = item.Product?.Category?.id || 0;
+      
+      if (!groupedByCategory[categoryName]) {
+        groupedByCategory[categoryName] = {
+          categoryId,
+          categoryName,
+          items: [],
+          totalQuantity: 0,
+          totalRevenue: 0
+        };
+      }
+      
+      const itemData = {
+        id: item.id,
+        productId: item.Product?.id,
+        productName: item.Product?.name,
+        sku: item.Product?.sku,
+        quantity: item.quantity,
+        price: parseFloat(item.price),
+        subtotal: parseFloat(item.subtotal),
+        transactionId: item.Transaction?.id,
+        transactionDate: item.Transaction?.createdAt,
+        customerName: item.Transaction?.customerName,
+        mop: item.Transaction?.mop
+      };
+      
+      groupedByCategory[categoryName].items.push(itemData);
+      groupedByCategory[categoryName].totalQuantity += item.quantity;
+      groupedByCategory[categoryName].totalRevenue += parseFloat(item.subtotal);
+    });
+
+    // Convert to array and sort by category name
+    const result = Object.values(groupedByCategory).sort((a, b) => 
+      a.categoryName.localeCompare(b.categoryName)
+    );
+
+    res.json(result);
+  } catch (err) {
+    console.error('Error in getSalesItemsByCategory:', err);
+    res.status(500).json({ message: 'Failed to fetch sales items by category', error: err.message });
   }
 }; 
