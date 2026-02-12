@@ -1,0 +1,13 @@
+# Netlify/Vercel redirect configuration
+# Redirect all routes to index.html for React Router
+
+/moredansmv/*  /moredansmv/index.html  200
+
+# If deployed at root, use:
+# /*  /index.html  200
+
+
+
+
+
+

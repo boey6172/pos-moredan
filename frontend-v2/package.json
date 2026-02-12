@@ -1,6 +1,6 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
+  "name": "pos-frontend-v2",
+  "version": "2.0.0",
   "private": true,
   "homepage": "https://yggdrasilsolution.com/moredansmv",
   "dependencies": {
@@ -8,19 +8,14 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
+    "@mui/system": "^7.2.0",
     "axios": "^1.11.0",
     "jwt-decode": "^4.0.0",
-    "lodash": "^4.17.21",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.7.1",
     "react-scripts": "5.0.1",
-    "recharts": "^3.1.2",
-    "web-vitals": "^2.1.4"
+    "recharts": "^3.1.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -47,3 +42,9 @@
     ]
   }
 }
+
+
+
+
+
+

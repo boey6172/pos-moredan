@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'http://192.168.254.100:5000',
+  baseURL: process.env.REACT_APP_API_BASE_URL || 'https://yggdrasilsolution.com/backend_pos',
 });
 
 export default instance; 

@@ -36,9 +36,42 @@ function AppRoutes() {
 }
 
 function App() {
+  // Get basename from REACT_APP_HOMEPAGE environment variable
+  // REACT_APP_HOMEPAGE can be:
+  // - Full URL: "https://yggdrasilsolution.com/moredansmv" → extracts "/moredansmv"
+  // - Path only: "/moredansmv" → uses as-is
+  // Falls back to REACT_APP_PUBLIC_URL, then PUBLIC_URL, then empty string
+  const getBasename = () => {
+    // Priority 1: Use REACT_APP_HOMEPAGE (primary source)
+    if (process.env.REACT_APP_HOMEPAGE) {
+      const homepage = process.env.REACT_APP_HOMEPAGE.trim();
+      // If it's a full URL, extract the pathname
+      try {
+        const url = new URL(homepage);
+        return url.pathname; // Returns "/moredansmv"
+      } catch {
+        // If it's not a valid URL, assume it's already a path
+        // Ensure it starts with "/"
+        return homepage.startsWith('/') ? homepage : `/${homepage}`;
+      }
+    }
+    
+    // Priority 2: Use REACT_APP_PUBLIC_URL (override)
+    if (process.env.REACT_APP_PUBLIC_URL) {
+      return process.env.REACT_APP_PUBLIC_URL;
+    }
+    
+    // Priority 3: Use PUBLIC_URL from build (extracted from homepage in package.json)
+    // In production build, PUBLIC_URL will be "/moredansmv" from homepage setting
+    // In development, PUBLIC_URL is usually empty
+    return process.env.PUBLIC_URL || '';
+  };
+
+  const basename = getBasename();
+
   return (
     <AuthProvider>
-      <Router>
+      <Router basename={basename}>
         <AppRoutes />
       </Router>
     </AuthProvider>
