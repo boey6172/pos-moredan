@@ -8,7 +8,7 @@ import Products from './pages/Products';
 import Transactions from './pages/Transactions';
 import Users from './pages/Users';
 import Categories from './pages/Categories';
-import Inventory from './pages/Inventory';
+import Inventory from './pages/Inventory/index';
 import Expenses from './pages/Expenses';
 import SalesItems from './pages/SalesItems';
 import Reports from './pages/Reports/index';

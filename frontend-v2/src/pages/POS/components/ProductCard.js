@@ -34,42 +34,93 @@ const ProductCard = memo(({ product, onAdd, addedToCartProductId }) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
+        minWidth: 0, // Prevents overflow
+        maxWidth: '100%',
       }}
     >
       {isAdded && (
         <Box
           sx={{
             position: 'absolute',
-            top: -10,
-            right: -10,
+            top: { xs: -8, sm: -10 },
+            right: { xs: -8, sm: -10 },
             zIndex: 10,
             animation: `${bounce} 0.6s ease-in-out`,
           }}
         >
           <CheckCircleIcon
-            sx={{ color: '#4caf50', fontSize: 30, backgroundColor: 'white', borderRadius: '50%' }}
+            sx={{ 
+              color: '#4caf50', 
+              fontSize: { xs: 22, sm: 30 }, 
+              backgroundColor: 'white', 
+              borderRadius: '50%' 
+            }}
           />
         </Box>
       )}
 
-      <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="h6" noWrap sx={{ mb: 1 }}>
+      <CardContent 
+        sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          p: { xs: 1, sm: 2 },
+          '&:last-child': { pb: { xs: 1, sm: 2 } },
+          minWidth: 0, // Prevents text overflow
+        }}
+      >
+        <Typography 
+          variant="h6" 
+          noWrap 
+          sx={{ 
+            mb: { xs: 0.5, sm: 1 },
+            fontSize: { xs: '0.85rem', sm: '1.25rem' },
+            lineHeight: { xs: 1.3, sm: 1.5 },
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
           {product.name}
         </Typography>
-        <Typography color="text.secondary" sx={{ mb: 1 }}>
+        <Typography 
+          color="text.secondary" 
+          sx={{ 
+            mb: { xs: 0.5, sm: 1 },
+            fontSize: { xs: '0.8rem', sm: '1rem' },
+            lineHeight: { xs: 1.3, sm: 1.5 },
+          }}
+        >
           {formatCurrency(product.price)}
         </Typography>
         {product.inventory !== undefined && (
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography 
+            variant="caption" 
+            color="text.secondary" 
+            sx={{ 
+              mb: { xs: 0.5, sm: 1 },
+              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+              lineHeight: { xs: 1.3, sm: 1.5 },
+            }}
+          >
             Stock: {product.inventory}
           </Typography>
         )}
         <Button
           variant="contained"
-          startIcon={<AddShoppingCartIcon />}
+          startIcon={<AddShoppingCartIcon sx={{ fontSize: { xs: '1rem', sm: '1.5rem' } }} />}
           onClick={handleAdd}
           fullWidth
-          sx={{ mt: 'auto' }}
+          sx={{ 
+            mt: 'auto',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+            py: { xs: 0.75, sm: 1 },
+            px: { xs: 1, sm: 2 },
+            minHeight: { xs: 32, sm: 36.5 },
+            '& .MuiButton-startIcon': {
+              marginRight: { xs: 0.75, sm: 1 },
+              marginLeft: 0,
+            }
+          }}
           disabled={product.inventory === 0}
           aria-label={`Add ${product.name} to cart`}
         >

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -25,12 +25,22 @@ import {
   MenuItem,
   Autocomplete,
   Alert,
+  InputAdornment,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Switch,
+  Divider,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import axios from '../api/axios';
+import MultiPaymentManager from './POS/components/MultiPaymentManager';
+import SinglePaymentSelector from './POS/components/SinglePaymentSelector';
 
 const Transactions = () => {
   const [transactions, setTransactions] = useState([]);
@@ -45,6 +55,11 @@ const Transactions = () => {
   const [toDate, setToDate] = useState(today);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [newProductId, setNewProductId] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [showDiscount, setShowDiscount] = useState(false);
+  const [isMultiPayment, setIsMultiPayment] = useState(false);
+  const [payments, setPayments] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
 
   useEffect(() => {
     fetchTransactions();
@@ -85,11 +100,31 @@ const Transactions = () => {
 
   const handleEditOpen = (tx) => {
     setEditTarget(tx);
+    
+    // Initialize discount
+    setDiscount(parseFloat(tx.discount) || 0);
+    setShowDiscount((parseFloat(tx.discount) || 0) > 0);
+    
+    // Initialize payment method
     if (tx.payments && Array.isArray(tx.payments) && tx.payments.length > 0) {
-      setMOP(tx.payments[0].method || 'Cash');
+      if (tx.payments.length > 1) {
+        // Multi-payment
+        setIsMultiPayment(true);
+        setPayments(tx.payments);
+        setPaymentMethod('Cash');
+      } else {
+        // Single payment
+        setIsMultiPayment(false);
+        setPayments([]);
+        setPaymentMethod(tx.payments[0].method || 'Cash');
+      }
     } else {
-      setMOP(tx.mop || 'Cash');
+      // Old format - single string
+      setIsMultiPayment(false);
+      setPayments([]);
+      setPaymentMethod(tx.mop || 'Cash');
     }
+    
     setEditedItems(
       tx.TransactionItems.map((item) => ({
         id: item.id,
@@ -135,20 +170,49 @@ const Transactions = () => {
     }
   };
 
+  const subtotal = useMemo(() => {
+    return editedItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  }, [editedItems]);
+
   const calculateTotal = () => {
-    return editedItems.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2);
+    return Math.max(0, subtotal - parseFloat(discount || 0));
   };
 
   const handleUpdate = async () => {
     try {
+      // Prepare payment data
+      let finalPayments = [];
+      let mopString = '';
+
+      if (isMultiPayment) {
+        const paidTotal = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+        const total = calculateTotal();
+        if (paidTotal < total) {
+          alert('Payment amount is less than total. Please add more payments.');
+          return;
+        }
+        finalPayments = payments;
+        mopString = JSON.stringify(payments);
+      } else {
+        const total = calculateTotal();
+        finalPayments = [{ method: paymentMethod, amount: total }];
+        mopString = JSON.stringify(finalPayments);
+      }
+
       await axios.put(`/api/transactions/${editTarget.id}`, {
         items: editedItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
         })),
-        mop,
+        discount: parseFloat(discount) || 0,
+        mop: mopString,
       });
       setEditTarget(null);
+      setDiscount(0);
+      setShowDiscount(false);
+      setIsMultiPayment(false);
+      setPayments([]);
+      setPaymentMethod('Cash');
       fetchTransactions();
     } catch (err) {
       alert(err.response?.data?.message || 'Update failed');
@@ -320,7 +384,27 @@ const Transactions = () => {
                 ))}
               </List>
               <Box mt={2}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                {selected.discount > 0 && (
+                  <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Subtotal:
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatCurrency((parseFloat(selected.total) || 0) + (parseFloat(selected.discount) || 0))}
+                    </Typography>
+                  </Box>
+                )}
+                {selected.discount > 0 && (
+                  <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography variant="body2" color="error">
+                      Discount:
+                    </Typography>
+                    <Typography variant="body2" color="error">
+                      -{formatCurrency(selected.discount)}
+                    </Typography>
+                  </Box>
+                )}
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
                   Payment Methods:
                 </Typography>
                 {selected.payments && Array.isArray(selected.payments) ? (
@@ -334,6 +418,7 @@ const Transactions = () => {
                     {selected.mop || 'N/A'}
                   </Typography>
                 )}
+                <Divider sx={{ my: 1 }} />
                 <Typography variant="subtitle2" sx={{ mt: 1, fontWeight: 'bold' }}>
                   Total: {formatCurrency(selected.total)}
                 </Typography>
@@ -347,9 +432,10 @@ const Transactions = () => {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={!!editTarget} onClose={() => setEditTarget(null)} maxWidth="sm" fullWidth>
+      <Dialog open={!!editTarget} onClose={() => setEditTarget(null)} maxWidth="md" fullWidth>
         <DialogTitle>Edit Transaction</DialogTitle>
         <DialogContent>
+          {/* Items List */}
           {editedItems.map((item) => (
             <Box
               key={item.productId}
@@ -394,27 +480,135 @@ const Transactions = () => {
             </IconButton>
           </Box>
 
-          <Box mt={2}>
-            <TextField
-              select
-              label="Mode of Payment"
-              value={mop}
-              onChange={(e) => setMOP(e.target.value)}
-              fullWidth
-            >
-              <MenuItem value="Cash">Cash</MenuItem>
-              <MenuItem value="Card">Card</MenuItem>
-              <MenuItem value="GCash">GCash</MenuItem>
-              <MenuItem value="PayMaya">PayMaya</MenuItem>
-              <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
-            </TextField>
+          <Divider sx={{ my: 3 }} />
+
+          {/* Discount Section */}
+          <Box mt={2} mb={2}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                Enable Discount
+              </Typography>
+              <Switch
+                checked={showDiscount}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setShowDiscount(enabled);
+                  if (!enabled) {
+                    setDiscount(0);
+                  }
+                }}
+                size="small"
+              />
+            </Box>
+            {showDiscount && (
+              <TextField
+                type="number"
+                label="Discount"
+                value={discount}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value) || 0;
+                  setDiscount(Math.max(0, Math.min(value, subtotal)));
+                }}
+                size="small"
+                fullWidth
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₱</InputAdornment>,
+                }}
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+            )}
           </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Totals */}
+          <Box mt={2} mb={2}>
+            <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Subtotal:
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {formatCurrency(subtotal)}
+              </Typography>
+            </Box>
+
+            {showDiscount && discount > 0 && (
+              <Box display="flex" justifyContent="space-between" sx={{ mb: 1 }}>
+                <Typography variant="body2" color="error">
+                  Discount:
+                </Typography>
+                <Typography variant="body2" color="error">
+                  -{formatCurrency(discount)}
+                </Typography>
+              </Box>
+            )}
+
+            <Divider sx={{ my: 1 }} />
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                Total:
+              </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                {formatCurrency(calculateTotal())}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+
+          {/* Payment Mode Selection */}
+          <Box mt={2} mb={2}>
+            <FormControl component="fieldset" fullWidth>
+              <FormLabel component="legend" sx={{ mb: 1, fontWeight: 'bold', fontSize: '0.95rem' }}>
+                Payment Mode
+              </FormLabel>
+              <RadioGroup
+                row
+                value={isMultiPayment ? 'multi' : 'single'}
+                onChange={(e) => {
+                  const isMulti = e.target.value === 'multi';
+                  setIsMultiPayment(isMulti);
+                  if (!isMulti) {
+                    setPayments([]);
+                  }
+                }}
+                sx={{ display: 'flex', gap: 1 }}
+              >
+                <FormControlLabel value="single" control={<Radio size="small" />} label="Single" />
+                <FormControlLabel value="multi" control={<Radio size="small" />} label="Multi" />
+              </RadioGroup>
+            </FormControl>
+          </Box>
+
+          {/* Payment Section */}
           <Box mt={2}>
-            <Typography variant="h6">Total: {formatCurrency(calculateTotal())}</Typography>
+            {isMultiPayment ? (
+              <MultiPaymentManager
+                payments={payments}
+                setPayments={setPayments}
+                total={calculateTotal()}
+              />
+            ) : (
+              <SinglePaymentSelector
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                total={calculateTotal()}
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditTarget(null)}>Cancel</Button>
+          <Button onClick={() => {
+            setEditTarget(null);
+            setDiscount(0);
+            setShowDiscount(false);
+            setIsMultiPayment(false);
+            setPayments([]);
+            setPaymentMethod('Cash');
+          }}>
+            Cancel
+          </Button>
           <Button variant="contained" color="primary" onClick={handleUpdate}>
             Save Changes
           </Button>

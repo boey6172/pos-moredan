@@ -266,10 +266,10 @@ const POS = () => {
               {categoryName} ({categoryProducts.length} items)
             </Typography>
           </AccordionSummary>
-          <AccordionDetails>
-            <Grid container spacing={2}>
+          <AccordionDetails sx={{ px: { xs: 1, sm: 2 } }}>
+            <Grid container spacing={{ xs: 1, sm: 2, md: 2 }}>
               {categoryProducts.map((product) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
+                <Grid item xs={6} sm={6} md={4} lg={3} key={product.id}>
                   <ProductCard
                     product={product}
                     onAdd={addToCart}

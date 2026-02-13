@@ -180,7 +180,7 @@ exports.deleteTransaction = async (req, res) => {
 exports.updateTransaction = async (req, res) => {
   const t = await Transaction.sequelize.transaction();
   try {
-    const { items, mop } = req.body;
+    const { items, mop, discount = 0 } = req.body;
     const transactionId = req.params.id;
 
     const transaction = await Transaction.findByPk(transactionId, {
@@ -199,26 +199,28 @@ exports.updateTransaction = async (req, res) => {
     // Delete old items
     await TransactionItem.destroy({ where: { transactionId }, transaction: t });
 
-    let newTotal = 0;
+    let subtotal = 0;
     for (const item of items) {
       const product = await Product.findByPk(item.productId);
       if (!product) throw new Error(`Product not found: ${item.productId}`);
       if (product.inventory < item.quantity) throw new Error(`Insufficient stock for: ${product.name}`);
 
-      const subtotal = parseFloat(product.price) * item.quantity;
-      newTotal += subtotal;
+      const itemSubtotal = parseFloat(product.price) * item.quantity;
+      subtotal += itemSubtotal;
 
       await TransactionItem.create({
         transactionId,
         productId: product.id,
         quantity: item.quantity,
         price: product.price,
-        subtotal
+        subtotal: itemSubtotal
       }, { transaction: t });
 
       product.inventory -= item.quantity;
       await product.save({ transaction: t });
     }
+
+    const newTotal = Math.max(0, subtotal - parseFloat(discount || 0));
 
     // Validate payment methods if mop is JSON (new format)
     let mopToStore = mop;
@@ -235,6 +237,7 @@ exports.updateTransaction = async (req, res) => {
     }
 
     transaction.total = newTotal;
+    transaction.discount = parseFloat(discount || 0);
     transaction.mop = mopToStore;
     await transaction.save({ transaction: t });
 

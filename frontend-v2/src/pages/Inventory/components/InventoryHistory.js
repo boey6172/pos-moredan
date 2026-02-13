@@ -13,27 +13,39 @@ import {
   Chip,
   CircularProgress,
   TextField,
-  Button,
+  MenuItem,
+  Alert,
 } from '@mui/material';
-import axios from '../api/axios';
+import axios from '../../../api/axios';
 
-const Inventory = () => {
+const InventoryHistory = () => {
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterType, setFilterType] = useState('');
+  const [error, setError] = useState('');
 
   const fetchMovements = async () => {
     try {
       setLoading(true);
+      setError('');
       const params = {};
       if (filterDate) {
-        params.startDate = filterDate;
-        params.endDate = filterDate;
+        const start = new Date(filterDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(filterDate);
+        end.setHours(23, 59, 59, 999);
+        params.startDate = start.toISOString();
+        params.endDate = end.toISOString();
+      }
+      if (filterType) {
+        params.type = filterType;
       }
       const res = await axios.get('/api/inventory/movements', { params });
       setMovements(res.data);
     } catch (err) {
       console.error('Error fetching inventory movements:', err);
+      setError('Failed to fetch inventory movements');
       setMovements([]);
     } finally {
       setLoading(false);
@@ -42,14 +54,18 @@ const Inventory = () => {
 
   useEffect(() => {
     fetchMovements();
-  }, [filterDate]);
+  }, [filterDate, filterType]);
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600 }}>
-          Inventory Movements
-        </Typography>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+        flexWrap="wrap"
+        gap={2}
+      >
         <TextField
           type="date"
           label="Filter by Date"
@@ -58,7 +74,25 @@ const Inventory = () => {
           InputLabelProps={{ shrink: true }}
           size="small"
         />
+        <TextField
+          select
+          label="Filter by Type"
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          size="small"
+          sx={{ minWidth: 150 }}
+        >
+          <MenuItem value="">All Types</MenuItem>
+          <MenuItem value="in">In</MenuItem>
+          <MenuItem value="out">Out</MenuItem>
+        </TextField>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <CardContent>
@@ -76,13 +110,16 @@ const Inventory = () => {
                     <TableCell>Type</TableCell>
                     <TableCell>Quantity</TableCell>
                     <TableCell>Notes</TableCell>
+                    <TableCell>User</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {movements.length > 0 ? (
                     movements.map((movement) => (
                       <TableRow key={movement.id} hover>
-                        <TableCell>{new Date(movement.createdAt).toLocaleString()}</TableCell>
+                        <TableCell>
+                          {new Date(movement.createdAt).toLocaleString()}
+                        </TableCell>
                         <TableCell>{movement.Product?.name || 'N/A'}</TableCell>
                         <TableCell>
                           <Chip
@@ -93,11 +130,14 @@ const Inventory = () => {
                         </TableCell>
                         <TableCell>{movement.quantity}</TableCell>
                         <TableCell>{movement.notes || '-'}</TableCell>
+                        <TableCell>
+                          {movement.User?.username || 'N/A'}
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} align="center">
+                      <TableCell colSpan={6} align="center">
                         <Typography color="text.secondary" py={2}>
                           No inventory movements found
                         </Typography>
@@ -114,10 +154,5 @@ const Inventory = () => {
   );
 };
 
-export default Inventory;
-
-
-
-
-
+export default InventoryHistory;
 

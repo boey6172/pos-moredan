@@ -92,14 +92,35 @@ const CartDrawer = ({
             borderBottom: '1px solid',
             borderColor: 'divider',
             minHeight: 64,
+            backgroundColor: 'background.paper',
           }}
         >
-          <IconButton onClick={onClose} sx={{ mr: 1 }} aria-label="close drawer">
-            <ArrowBackIcon />
-          </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Cart ({cart.length})
           </Typography>
+        </Box>
+
+        {/* Back Button Section */}
+        <Box
+          sx={{
+            p: 1.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Button
+            onClick={onClose}
+            startIcon={<ArrowBackIcon />}
+            variant="text"
+            fullWidth
+            sx={{
+              textTransform: 'none',
+              justifyContent: 'flex-start',
+            }}
+            aria-label="Back to POS items"
+          >
+            Back
+          </Button>
         </Box>
 
         {/* Scrollable content */}
