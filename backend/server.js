@@ -13,9 +13,14 @@ const userRoutes = require('./routes/user');
 const startingCash = require('./routes/startingcash');
 const reconciliationRoutes = require('./routes/reconciliation');
 const dashboardRoutes = require('./routes/dashboard');
+const expenseRoutes = require('./routes/expense');
 const path = require('path');
 const sequelize = require('./config/database');
 const helmet = require('helmet');
+
+// Ensure expense models are registered before sync (so tables are created)
+require('./models/Expense');
+require('./models/ExpenseType');
 
 app.use(cors({
   origin: '*' // Replace with your frontend's origin
@@ -37,7 +42,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/startingcash', startingCash);
 app.use('/api/reconciliation', reconciliationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-
+app.use('/api/expenses', expenseRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK' });
@@ -45,6 +50,8 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({ status: 'OK' });
 });
+
+// Use standard sync without alter to avoid breaking existing data constraints
 sequelize.sync()
   .then(() => {
     app.listen(5000,'0.0.0.0', () => console.log('Server running on port 5000'));

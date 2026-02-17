@@ -34,11 +34,13 @@ exports.createStartingCash = async (req, res) => {
     let startingCash;
   
     if (existing) {
+      // Update today's starting cash with the provided amount
       existing.starting = amount;
       await existing.save();
       startingCash = existing;
     } else {
-      startingCash = await StartingCash.create({ starting: 1500 });
+      // Create today's starting cash using the user-provided amount
+      startingCash = await StartingCash.create({ starting: amount });
     }
   
     res.status(201).json(startingCash);

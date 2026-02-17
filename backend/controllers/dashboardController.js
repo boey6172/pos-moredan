@@ -2,6 +2,7 @@ const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
 const StartingCash = require('../models/StartingCash');
 const EndOfDayReconciliation = require('../models/EndOfDayReconciliation');
+const Expense = require('../models/Expense');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
 const { calculatePaymentMethodTotals } = require('../utils/paymentUtils');
@@ -56,6 +57,16 @@ exports.getDashboardMetrics = async (req, res) => {
 
     const totalTransactions = transactions.length;
     const averageTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+
+    // Get today's expenses
+    const todayExpenses = await Expense.findAll({
+      where: {
+        createdAt: {
+          [Op.between]: [today, endOfDay]
+        }
+      }
+    });
+    const totalExpenses = todayExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
 
     // Get low stock products
     const lowStockProducts = await Product.findAll({
@@ -113,7 +124,7 @@ exports.getDashboardMetrics = async (req, res) => {
 
     // Cash summary
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
-    const expectedCash = startingCashAmount + cashSales;
+    const expectedCash = startingCashAmount + cashSales - totalExpenses;
 
     // Check if reconciled
     const reconciliation = await EndOfDayReconciliation.findOne({
@@ -125,6 +136,7 @@ exports.getDashboardMetrics = async (req, res) => {
     res.json({
       today: {
         totalSales,
+        totalExpenses,
         cashSales,
         gcashSales,
         cardSales,
