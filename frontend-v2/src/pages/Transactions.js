@@ -60,6 +60,7 @@ const Transactions = () => {
   const [isMultiPayment, setIsMultiPayment] = useState(false);
   const [payments, setPayments] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [mopFilter, setMopFilter] = useState('all');
 
   useEffect(() => {
     fetchTransactions();
@@ -233,6 +234,34 @@ const Transactions = () => {
     return `₱${(parseFloat(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  // Filter transactions by MOP
+  const filteredTransactions = useMemo(() => {
+    if (mopFilter === 'all') {
+      return transactions;
+    }
+
+    if (mopFilter === 'multi') {
+      // Filter for transactions with multiple payment methods
+      return transactions.filter((tx) => {
+        if (tx.payments && Array.isArray(tx.payments)) {
+          return tx.payments.length > 1;
+        }
+        return false;
+      });
+    }
+
+    // Filter for specific payment method
+    return transactions.filter((tx) => {
+      if (tx.payments && Array.isArray(tx.payments)) {
+        // Check if any payment method matches
+        return tx.payments.some((p) => p.method === mopFilter);
+      } else {
+        // Old format - check mop string
+        return tx.mop === mopFilter;
+      }
+    });
+  }, [transactions, mopFilter]);
+
   return (
     <Box>
       <Box
@@ -263,6 +292,22 @@ const Transactions = () => {
             onChange={(e) => setToDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
+          <TextField
+            select
+            label="MOP"
+            size="small"
+            value={mopFilter}
+            onChange={(e) => setMopFilter(e.target.value)}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value="all">All Methods</MenuItem>
+            <MenuItem value="Cash">Cash</MenuItem>
+            <MenuItem value="GCash">GCash</MenuItem>
+            <MenuItem value="Card">Card</MenuItem>
+            <MenuItem value="PayMaya">PayMaya</MenuItem>
+            <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
+            <MenuItem value="multi">Multi-Payment</MenuItem>
+          </TextField>
           <Button variant="contained" onClick={fetchTransactions}>
             Apply
           </Button>
@@ -271,6 +316,7 @@ const Transactions = () => {
             onClick={() => {
               setFromDate('');
               setToDate('');
+              setMopFilter('all');
               fetchTransactions();
             }}
           >
@@ -300,8 +346,8 @@ const Transactions = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {transactions.length > 0 ? (
-                    transactions.map((tx) => (
+                  {filteredTransactions.length > 0 ? (
+                    filteredTransactions.map((tx) => (
                       <TableRow key={tx.id} hover>
                         <TableCell>{new Date(tx.createdAt).toLocaleString()}</TableCell>
                         <TableCell>{tx.customerName}</TableCell>
@@ -355,7 +401,9 @@ const Transactions = () => {
                     <TableRow>
                       <TableCell colSpan={7} align="center">
                         <Typography color="text.secondary" py={2}>
-                          No transactions found
+                          {transactions.length === 0 
+                            ? 'No transactions found' 
+                            : `No transactions found with selected MOP filter`}
                         </Typography>
                       </TableCell>
                     </TableRow>

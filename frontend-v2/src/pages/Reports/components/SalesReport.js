@@ -15,7 +15,7 @@ const SalesReport = ({
   onEndDateChange,
 }) => {
   return (
-    <Box>
+    <Box sx={{ width: '100%' }}>
       <SalesReportFilters
         period={period}
         startDate={startDate}
@@ -25,39 +25,83 @@ const SalesReport = ({
         onEndDateChange={onEndDateChange}
       />
 
-      <Grid container spacing={{ xs: 1, md: 2 }}>
-        <Grid item xs={12} lg={8}>
+      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
+        <Grid item xs={12} sm={12} md={7} lg={8}>
           <SalesTrendChart data={salesData} />
         </Grid>
-        <Grid item xs={12} lg={4}>
+        <Grid item xs={12} sm={12} md={5} lg={4}>
           <ReportSummary salesData={salesData} />
         </Grid>
       </Grid>
 
-      <Paper sx={{ mt: 4, p: { xs: 2, md: 3 } }}>
-        <Typography variant="h6" mb={3}>
+      <Paper sx={{ mt: { xs: 3, md: 4 }, p: { xs: 1.5, sm: 2, md: 3 } }}>
+        <Typography variant="h6" mb={{ xs: 2, md: 3 }} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
           Sales Data
         </Typography>
-        <TableContainer sx={{ overflowX: 'auto' }}>
-          <Table>
+        <TableContainer 
+          sx={{ 
+            overflowX: 'auto',
+            '&::-webkit-scrollbar': {
+              height: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(0,0,0,0.05)',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              borderRadius: '4px',
+            },
+          }}
+        >
+          <Table sx={{ minWidth: 650 }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>
+                <TableCell sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.1rem' }, 
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  px: { xs: 1, sm: 2, md: 3 }
+                }}>
                   Period
                 </TableCell>
-                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>
+                <TableCell sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.1rem' }, 
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  px: { xs: 1, sm: 2, md: 3 }
+                }}>
                   Transactions
                 </TableCell>
-                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>
+                <TableCell sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.1rem' }, 
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  px: { xs: 1, sm: 2, md: 3 }
+                }}>
                   GCash Sales
                 </TableCell>
-                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>
+                <TableCell sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.1rem' }, 
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  px: { xs: 1, sm: 2, md: 3 }
+                }}>
                   Cash Sales
                 </TableCell>
-                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>
+                <TableCell sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.1rem' }, 
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  px: { xs: 1, sm: 2, md: 3 }
+                }}>
                   Total Sales
                 </TableCell>
-                <TableCell sx={{ fontSize: { xs: '0.9rem', md: '1.1rem' }, fontWeight: 'bold' }}>
+                <TableCell sx={{ 
+                  fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1.1rem' }, 
+                  fontWeight: 'bold',
+                  whiteSpace: 'nowrap',
+                  px: { xs: 1, sm: 2, md: 3 }
+                }}>
                   Average Sale
                 </TableCell>
               </TableRow>
@@ -66,22 +110,40 @@ const SalesReport = ({
               {salesData.length > 0 ? (
                 salesData.map((item, index) => (
                   <TableRow key={index} hover>
-                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <TableCell sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.8rem', md: '1rem' },
+                      px: { xs: 1, sm: 2, md: 3 }
+                    }}>
                       {formatDate(item.period)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <TableCell sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.8rem', md: '1rem' },
+                      px: { xs: 1, sm: 2, md: 3 }
+                    }}>
                       {item.transactionCount || 0}
                     </TableCell>
-                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <TableCell sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.8rem', md: '1rem' },
+                      px: { xs: 1, sm: 2, md: 3 }
+                    }}>
                       {formatCurrency(item.gcashSales || 0)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <TableCell sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.8rem', md: '1rem' },
+                      px: { xs: 1, sm: 2, md: 3 }
+                    }}>
                       {formatCurrency(item.cashSales || 0)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <TableCell sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.8rem', md: '1rem' },
+                      px: { xs: 1, sm: 2, md: 3 }
+                    }}>
                       {formatCurrency(item.totalSales)}
                     </TableCell>
-                    <TableCell sx={{ fontSize: { xs: '0.8rem', md: '1rem' } }}>
+                    <TableCell sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.8rem', md: '1rem' },
+                      px: { xs: 1, sm: 2, md: 3 }
+                    }}>
                       {formatCurrency(
                         item.transactionCount > 0 ? item.totalSales / item.transactionCount : 0
                       )}
@@ -90,8 +152,10 @@ const SalesReport = ({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    <Typography color="text.secondary">No sales data available</Typography>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                    <Typography color="text.secondary" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>
+                      No sales data available
+                    </Typography>
                   </TableCell>
                 </TableRow>
               )}

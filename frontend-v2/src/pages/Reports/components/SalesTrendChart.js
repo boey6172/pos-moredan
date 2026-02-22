@@ -15,7 +15,7 @@ import { formatCurrency } from '../utils/helpers';
 const SalesTrendChart = ({ data }) => {
   if (!data || data.length === 0) {
     return (
-      <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 400, md: 600 } }}>
+      <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 200, md: 600 }, width: { xs: '100%', md: 600 } }}>
         <Typography variant="h6" mb={3}>
           Sales Trend
         </Typography>
@@ -27,7 +27,7 @@ const SalesTrendChart = ({ data }) => {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 400, md: 600 } }}>
+    <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 200, md: 600 }, width: { xs: '100%', md: 600 }, display: 'flex', flexWrap: 'wrap' }}>
       <Typography variant="h6" mb={3}>
         Sales Trend
       </Typography>

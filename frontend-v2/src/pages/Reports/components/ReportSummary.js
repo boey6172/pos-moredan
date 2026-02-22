@@ -8,7 +8,7 @@ const ReportSummary = ({ salesData }) => {
   const averageSale = calculateAverageSale(salesData);
 
   return (
-    <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 'auto', md: 600 } }}>
+    <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 'auto', md: 600 }, width: '100%' }}>
       <Typography variant="h6" mb={3}>
         Summary
       </Typography>

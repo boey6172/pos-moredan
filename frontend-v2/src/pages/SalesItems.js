@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -22,6 +22,16 @@ import {
   Grid,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 import axios from '../api/axios';
 
 const SalesItems = () => {
@@ -89,6 +99,41 @@ const SalesItems = () => {
 
   const calculateGrandQuantity = () => {
     return salesData.reduce((sum, category) => sum + category.totalQuantity, 0);
+  };
+
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    return salesData.map((category) => ({
+      name: category.categoryName || 'Uncategorized',
+      count: category.totalQuantity || 0,
+      amount: parseFloat(category.totalRevenue) || 0,
+    }));
+  }, [salesData]);
+
+  // Custom tooltip formatter
+  const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper sx={{ p: 1.5, border: '1px solid #ccc' }}>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            {payload[0].payload.name}
+          </Typography>
+          {payload.map((entry, index) => (
+            <Typography
+              key={index}
+              variant="body2"
+              sx={{ color: entry.color }}
+            >
+              {entry.name}:{' '}
+              {entry.dataKey === 'count'
+                ? entry.value.toLocaleString()
+                : formatCurrency(entry.value)}
+            </Typography>
+          ))}
+        </Paper>
+      );
+    }
+    return null;
   };
 
   return (
@@ -177,6 +222,49 @@ const SalesItems = () => {
             </Card>
           </Grid>
         </Grid>
+      )}
+
+      {/* Bar Chart */}
+      {!loading && salesData.length > 0 && (
+        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 3 }}>
+          <Typography variant="h6" mb={3}>
+            Sales by Category
+          </Typography>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={100}
+                interval={0}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+              <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar
+                yAxisId="left"
+                dataKey="count"
+                fill="#8884d8"
+                name="Count"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                yAxisId="right"
+                dataKey="amount"
+                fill="#82ca9d"
+                name="Amount (₱)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
       )}
 
       {/* Loading State */}
