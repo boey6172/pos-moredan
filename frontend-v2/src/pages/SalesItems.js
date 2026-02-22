@@ -65,6 +65,24 @@ const SalesItems = () => {
     return date.toLocaleString();
   };
 
+  // Parse payment methods from mop field
+  const parsePaymentMethods = (mop) => {
+    if (!mop) return null;
+    
+    // Try to parse as JSON (new format)
+    try {
+      const parsed = JSON.parse(mop);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch (e) {
+      // Not JSON, treat as old format (single string)
+    }
+    
+    // Old format: return as single payment method
+    return [{ method: mop, amount: null }];
+  };
+
   const calculateGrandTotal = () => {
     return salesData.reduce((sum, category) => sum + category.totalRevenue, 0);
   };
@@ -222,11 +240,40 @@ const SalesItems = () => {
                           <TableCell>{formatDate(item.transactionDate)}</TableCell>
                           <TableCell>{item.customerName || 'N/A'}</TableCell>
                           <TableCell>
-                            <Chip
-                              label={item.mop || 'Cash'}
-                              size="small"
-                              color={item.mop === 'GCash' ? 'primary' : 'default'}
-                            />
+                            {(() => {
+                              const payments = parsePaymentMethods(item.mop);
+                              if (payments && Array.isArray(payments) && payments.length > 1) {
+                                // Multi-payment display
+                                return (
+                                  <Box>
+                                    {payments.map((p, idx) => (
+                                      <Typography key={idx} variant="caption" display="block">
+                                        {p.method}: {formatCurrency(p.amount)}
+                                      </Typography>
+                                    ))}
+                                  </Box>
+                                );
+                              } else if (payments && payments.length === 1) {
+                                // Single payment display
+                                const paymentMethod = payments[0].method || item.mop || 'Cash';
+                                return (
+                                  <Chip
+                                    label={paymentMethod}
+                                    size="small"
+                                    color={paymentMethod === 'GCash' ? 'primary' : 'default'}
+                                  />
+                                );
+                              } else {
+                                // Fallback
+                                return (
+                                  <Chip
+                                    label={item.mop || 'Cash'}
+                                    size="small"
+                                    color={item.mop === 'GCash' ? 'primary' : 'default'}
+                                  />
+                                );
+                              }
+                            })()}
                           </TableCell>
                         </TableRow>
                       ))}
