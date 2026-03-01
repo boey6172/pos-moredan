@@ -18,8 +18,10 @@ import {
   TextField,
   IconButton,
   CircularProgress,
+  Skeleton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import TableSkeleton from '../components/TableSkeleton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from '../api/axios';
@@ -30,6 +32,8 @@ const Categories = () => {
   const [edit, setEdit] = useState(null);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   const fetchCategories = async () => {
     try {
@@ -61,6 +65,8 @@ const Categories = () => {
   };
 
   const handleSave = async () => {
+    if (saving) return; // Prevent double-click
+    setSaving(true);
     try {
       if (edit) {
         await axios.put(`/api/categories/${edit.id}`, { name });
@@ -71,16 +77,22 @@ const Categories = () => {
       handleClose();
     } catch (err) {
       alert(err.response?.data?.message || 'Error saving category');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
+    if (deleting === id) return; // Prevent double-click
     if (!window.confirm('Delete this category?')) return;
+    setDeleting(id);
     try {
       await axios.delete(`/api/categories/${id}`);
       fetchCategories();
     } catch (err) {
       alert(err.response?.data?.message || 'Error deleting category');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -98,9 +110,7 @@ const Categories = () => {
       <Card>
         <CardContent>
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
+            <TableSkeleton rows={6} columns={2} />
           ) : (
             <TableContainer>
               <Table>
@@ -128,9 +138,10 @@ const Categories = () => {
                             size="small"
                             color="error"
                             onClick={() => handleDelete(category.id)}
+                            disabled={deleting === category.id}
                             aria-label={`Delete ${category.name}`}
                           >
-                            <DeleteIcon />
+                            {deleting === category.id ? <CircularProgress size={20} /> : <DeleteIcon />}
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -165,9 +176,9 @@ const Categories = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" disabled={!name}>
-            Save
+          <Button onClick={handleClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained" disabled={!name || saving}>
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

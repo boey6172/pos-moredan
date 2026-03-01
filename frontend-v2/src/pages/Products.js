@@ -21,6 +21,7 @@ import {
   Chip,
   CircularProgress,
 } from '@mui/material';
+import TableSkeleton from '../components/TableSkeleton';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -42,6 +43,8 @@ const Products = () => {
   });
   const [categoryFilter, setCategoryFilter] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
 
   const filteredProducts = categoryFilter
     ? products.filter((p) => p.categoryId === parseInt(categoryFilter))
@@ -92,6 +95,8 @@ const Products = () => {
   };
 
   const handleSave = async () => {
+    if (saving) return; // Prevent double-click
+    setSaving(true);
     try {
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => {
@@ -114,16 +119,22 @@ const Products = () => {
       handleClose();
     } catch (err) {
       alert(err.response?.data?.message || 'Error saving product');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
+    if (deleting === id) return; // Prevent double-click
     if (!window.confirm('Delete this product?')) return;
+    setDeleting(id);
     try {
       await axios.delete(`/api/products/${id}`);
       fetchProducts();
     } catch (err) {
       alert(err.response?.data?.message || 'Error deleting product');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -162,9 +173,7 @@ const Products = () => {
       <Card>
         <CardContent>
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
+            <TableSkeleton rows={6} columns={6} />
           ) : (
             <TableContainer>
               <Table>
@@ -206,9 +215,10 @@ const Products = () => {
                             size="small"
                             color="error"
                             onClick={() => handleDelete(product.id)}
+                            disabled={deleting === product.id}
                             aria-label={`Delete ${product.name}`}
                           >
-                            <DeleteIcon />
+                            {deleting === product.id ? <CircularProgress size={20} /> : <DeleteIcon />}
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -301,9 +311,9 @@ const Products = () => {
           </Button>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" disabled={!form.name || !form.price}>
-            Save
+          <Button onClick={handleClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained" disabled={!form.name || !form.price || saving}>
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

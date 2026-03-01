@@ -7,10 +7,10 @@ import {
   AccordionDetails,
   Grid,
   Button,
-  CircularProgress,
   Alert,
   Fab,
 } from '@mui/material';
+import { POSProductSkeleton } from '../../components/PageSkeleton';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import axios from '../../api/axios';
@@ -45,6 +45,7 @@ const POS = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [addedProductName, setAddedProductName] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const receiptRef = React.useRef(null);
 
   useEffect(() => {
@@ -142,6 +143,7 @@ const POS = () => {
   }, []);
 
   const handleCheckout = useCallback(async () => {
+    if (checkoutLoading) return; // Prevent double-click
     if (cart.length === 0) return;
 
     let finalPayments = [];
@@ -165,6 +167,7 @@ const POS = () => {
     }
 
     setCheckoutStatus(null);
+    setCheckoutLoading(true);
 
     try {
       const res = await axios.post('/api/transactions', {
@@ -202,8 +205,10 @@ const POS = () => {
       const message = err?.response?.data?.message || err.message || 'Checkout failed';
       console.error('Checkout error', err);
       setCheckoutStatus(message);
+    } finally {
+      setCheckoutLoading(false);
     }
-  }, [cart, payments, paymentMethod, isMultiPayment, customerName, total, discount, subtotal]);
+  }, [cart, payments, paymentMethod, isMultiPayment, customerName, total, discount, subtotal, checkoutLoading]);
 
   const handleReceiptClose = useCallback(() => {
     setReceiptOpen(false);
@@ -230,8 +235,8 @@ const POS = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
+      <Box>
+        <POSProductSkeleton />
       </Box>
     );
   }
@@ -330,6 +335,7 @@ const POS = () => {
         total={total}
         onConfirm={handleCheckout}
         status={checkoutStatus}
+        loading={checkoutLoading}
       />
 
       <ReceiptDialog

@@ -34,6 +34,7 @@ import {
   Switch,
   Divider,
 } from '@mui/material';
+import TableSkeleton from '../components/TableSkeleton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -61,6 +62,8 @@ const Transactions = () => {
   const [payments, setPayments] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [mopFilter, setMopFilter] = useState('all');
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchTransactions();
@@ -180,6 +183,8 @@ const Transactions = () => {
   };
 
   const handleUpdate = async () => {
+    if (updating) return; // Prevent double-click
+    setUpdating(true);
     try {
       // Prepare payment data
       let finalPayments = [];
@@ -190,6 +195,7 @@ const Transactions = () => {
         const total = calculateTotal();
         if (paidTotal < total) {
           alert('Payment amount is less than total. Please add more payments.');
+          setUpdating(false);
           return;
         }
         finalPayments = payments;
@@ -217,16 +223,22 @@ const Transactions = () => {
       fetchTransactions();
     } catch (err) {
       alert(err.response?.data?.message || 'Update failed');
+    } finally {
+      setUpdating(false);
     }
   };
 
   const handleDelete = async () => {
+    if (deleting) return; // Prevent double-click
+    setDeleting(true);
     try {
       await axios.delete(`/api/transactions/${deleteTarget.id}`);
       setDeleteTarget(null);
       fetchTransactions();
     } catch (err) {
       alert(err.response?.data?.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -308,8 +320,8 @@ const Transactions = () => {
             <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
             <MenuItem value="multi">Multi-Payment</MenuItem>
           </TextField>
-          <Button variant="contained" onClick={fetchTransactions}>
-            Apply
+          <Button variant="contained" onClick={fetchTransactions} disabled={loading}>
+            {loading ? 'Loading...' : 'Apply'}
           </Button>
           <Button
             variant="outlined"
@@ -319,6 +331,7 @@ const Transactions = () => {
               setMopFilter('all');
               fetchTransactions();
             }}
+            disabled={loading}
           >
             Clear
           </Button>
@@ -328,9 +341,7 @@ const Transactions = () => {
       <Card>
         <CardContent>
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
+            <TableSkeleton rows={8} columns={7} />
           ) : (
             <TableContainer>
               <Table>
@@ -654,11 +665,11 @@ const Transactions = () => {
             setIsMultiPayment(false);
             setPayments([]);
             setPaymentMethod('Cash');
-          }}>
+          }} disabled={updating}>
             Cancel
           </Button>
-          <Button variant="contained" color="primary" onClick={handleUpdate}>
-            Save Changes
+          <Button variant="contained" color="primary" onClick={handleUpdate} disabled={updating}>
+            {updating ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -672,9 +683,9 @@ const Transactions = () => {
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDelete}>
-            Delete
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

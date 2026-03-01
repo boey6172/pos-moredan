@@ -19,6 +19,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
+import TableSkeleton from '../../../components/TableSkeleton';
 import axios from '../../../api/axios';
 
 const ProductManagement = () => {
@@ -91,9 +92,7 @@ const ProductManagement = () => {
       <Card>
         <CardContent>
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
+            <TableSkeleton rows={6} columns={4} />
           ) : (
             <TableContainer>
               <Table>

@@ -25,6 +25,7 @@ import {
   IconButton,
   Tooltip,
 } from '@mui/material';
+import { DashboardSkeleton } from '../components/PageSkeleton';
 import {
   BarChart,
   Bar,
@@ -141,11 +142,7 @@ const Dashboard = () => {
   };
 
   if (loading && !metrics) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress aria-label="Loading dashboard data" />
-      </Box>
-    );
+    return <DashboardSkeleton />;
   }
 
   const StatCard = ({ title, value, icon: Icon, color = 'primary', loading: cardLoading }) => (

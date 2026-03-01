@@ -16,6 +16,7 @@ import {
   MenuItem,
   Alert,
 } from '@mui/material';
+import TableSkeleton from '../../../components/TableSkeleton';
 import axios from '../../../api/axios';
 
 const InventoryHistory = () => {
@@ -97,9 +98,7 @@ const InventoryHistory = () => {
       <Card>
         <CardContent>
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
+            <TableSkeleton rows={6} columns={5} />
           ) : (
             <TableContainer>
               <Table>

@@ -2,7 +2,6 @@
   "name": "pos-frontend-v2",
   "version": "2.0.0",
   "private": true,
-  "homepage": "https://yggdrasilsolution.com/moredansmv",
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

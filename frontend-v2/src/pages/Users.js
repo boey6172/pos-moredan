@@ -22,6 +22,7 @@ import {
   MenuItem,
   Alert,
 } from '@mui/material';
+import TableSkeleton from '../components/TableSkeleton';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -38,6 +39,9 @@ const Users = () => {
   const [resetId, setResetId] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [resetting, setResetting] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -69,6 +73,8 @@ const Users = () => {
   };
 
   const handleSave = async () => {
+    if (saving) return; // Prevent double-click
+    setSaving(true);
     try {
       if (edit) {
         await axios.put(`/api/users/${edit.id}`, { username: form.username, role: form.role });
@@ -79,20 +85,28 @@ const Users = () => {
       handleClose();
     } catch (err) {
       alert(err.response?.data?.message || 'Error saving user');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
+    if (deleting === id) return; // Prevent double-click
     if (!window.confirm('Delete this user?')) return;
+    setDeleting(id);
     try {
       await axios.delete(`/api/users/${id}`);
       fetchUsers();
     } catch (err) {
       alert(err.response?.data?.message || 'Error deleting user');
+    } finally {
+      setDeleting(null);
     }
   };
 
   const handleReset = async () => {
+    if (resetting) return; // Prevent double-click
+    setResetting(true);
     try {
       await axios.post(`/api/users/${resetId}/reset-password`, { password: resetPassword });
       setResetId(null);
@@ -100,6 +114,8 @@ const Users = () => {
       alert('Password reset successfully');
     } catch (err) {
       alert(err.response?.data?.message || 'Error resetting password');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -117,9 +133,7 @@ const Users = () => {
       <Card>
         <CardContent>
           {loading ? (
-            <Box display="flex" justifyContent="center" p={4}>
-              <CircularProgress />
-            </Box>
+            <TableSkeleton rows={6} columns={4} />
           ) : (
             <TableContainer>
               <Table>
@@ -165,9 +179,10 @@ const Users = () => {
                             size="small"
                             color="error"
                             onClick={() => handleDelete(user.id)}
+                            disabled={deleting === user.id}
                             aria-label={`Delete user ${user.username}`}
                           >
-                            <DeleteIcon />
+                            {deleting === user.id ? <CircularProgress size={20} /> : <DeleteIcon />}
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -225,9 +240,9 @@ const Users = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" disabled={!form.username || (!edit && !form.password)}>
-            Save
+          <Button onClick={handleClose} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} variant="contained" disabled={!form.username || (!edit && !form.password) || saving}>
+            {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -251,9 +266,9 @@ const Users = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResetId(null)}>Cancel</Button>
-          <Button onClick={handleReset} variant="contained" disabled={!resetPassword}>
-            Reset
+          <Button onClick={() => setResetId(null)} disabled={resetting}>Cancel</Button>
+          <Button onClick={handleReset} variant="contained" disabled={!resetPassword || resetting}>
+            {resetting ? 'Resetting...' : 'Reset'}
           </Button>
         </DialogActions>
       </Dialog>

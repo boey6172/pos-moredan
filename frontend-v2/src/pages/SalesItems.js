@@ -20,7 +20,9 @@ import {
   Card,
   CardContent,
   Grid,
+  Skeleton,
 } from '@mui/material';
+import { ContentSkeleton } from '../components/PageSkeleton';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   BarChart,
@@ -166,8 +168,8 @@ const SalesItems = () => {
             onChange={(e) => setToDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
           />
-          <Button variant="contained" onClick={fetchSalesItems}>
-            Apply Filter
+          <Button variant="contained" onClick={fetchSalesItems} disabled={loading}>
+            {loading ? 'Loading...' : 'Apply Filter'}
           </Button>
           <Button
             variant="outlined"
@@ -176,6 +178,7 @@ const SalesItems = () => {
               setToDate('');
               fetchSalesItems();
             }}
+            disabled={loading}
           >
             Clear
           </Button>
@@ -269,8 +272,24 @@ const SalesItems = () => {
 
       {/* Loading State */}
       {loading && (
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress size={60} />
+        <Box>
+          <Grid container spacing={2} sx={{ mb: 3 }}>
+            {[1, 2, 3].map((i) => (
+              <Grid item xs={12} sm={4} key={i}>
+                <Card>
+                  <CardContent>
+                    <Skeleton variant="text" width="60%" height={24} />
+                    <Skeleton variant="text" width="40%" height={36} sx={{ mt: 1 }} />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          <Card>
+            <CardContent>
+              <ContentSkeleton lines={8} />
+            </CardContent>
+          </Card>
         </Box>
       )}
 

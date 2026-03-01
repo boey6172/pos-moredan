@@ -56,9 +56,39 @@ exports.createExpenseType = async (req, res) => {
   }
 };
 
+exports.getTinProfiles = async (req, res) => {
+  try {
+    const sequelize = Expense.sequelize;
+    const expenses = await Expense.findAll({
+      where: sequelize.literal('"Expense"."tinNumber" IS NOT NULL'),
+      attributes: ['particulars', 'tinNumber', 'address', 'referenceNo'],
+      raw: true,
+    });
+    const seen = new Set();
+    const profiles = expenses
+      .filter((e) => {
+        const key = [e.particulars, e.tinNumber, e.address, e.referenceNo].join('|');
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((e) => ({
+        particulars: e.particulars || '',
+        tinNumber: e.tinNumber || '',
+        address: e.address || '',
+        referenceNo: e.referenceNo || '',
+      }))
+      .sort((a, b) => (a.tinNumber || '').localeCompare(b.tinNumber || ''));
+    res.json(profiles);
+  } catch (err) {
+    console.error('Error fetching tin profiles:', err);
+    res.status(500).json({ message: 'Failed to fetch tin profiles', error: err.message });
+  }
+};
+
 exports.createExpense = async (req, res) => {
   try {
-    const { amount, type, location, notes } = req.body;
+    const { amount, type, location, notes, particulars, tinNumber, address, referenceNo } = req.body;
     if (amount == null || amount === '' || isNaN(parseFloat(amount)) || parseFloat(amount) < 0) {
       return res.status(400).json({ message: 'Valid amount is required.' });
     }
@@ -73,6 +103,10 @@ exports.createExpense = async (req, res) => {
       type: String(type).trim(),
       location: String(location).trim(),
       notes: notes ? String(notes).trim() : null,
+      particulars: particulars != null ? String(particulars).trim() || null : null,
+      tinNumber: tinNumber != null ? String(tinNumber).trim() || null : null,
+      address: address != null ? String(address).trim() || null : null,
+      referenceNo: referenceNo != null ? String(referenceNo).trim() || null : null,
       createdBy: req.user.id,
     });
     const withCreator = await Expense.findByPk(expense.id, {
@@ -88,7 +122,7 @@ exports.createExpense = async (req, res) => {
 exports.updateExpense = async (req, res) => {
   try {
     const { id } = req.params;
-    const { amount, type, location, notes } = req.body;
+    const { amount, type, location, notes, particulars, tinNumber, address, referenceNo } = req.body;
     const expense = await Expense.findByPk(id);
     if (!expense) {
       return res.status(404).json({ message: 'Expense not found.' });
@@ -101,6 +135,10 @@ exports.updateExpense = async (req, res) => {
       ...(type != null && { type: String(type).trim() }),
       ...(location != null && { location: String(location).trim() }),
       ...(notes !== undefined && { notes: notes ? String(notes).trim() : null }),
+      ...(particulars !== undefined && { particulars: particulars != null ? String(particulars).trim() || null : null }),
+      ...(tinNumber !== undefined && { tinNumber: tinNumber != null ? String(tinNumber).trim() || null : null }),
+      ...(address !== undefined && { address: address != null ? String(address).trim() || null : null }),
+      ...(referenceNo !== undefined && { referenceNo: referenceNo != null ? String(referenceNo).trim() || null : null }),
     });
     const updated = await Expense.findByPk(expense.id, {
       include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],

@@ -7,9 +7,10 @@ import {
   Button,
   Typography,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 
-const CheckoutDialog = ({ open, onClose, total, onConfirm, status }) => {
+const CheckoutDialog = ({ open, onClose, total, onConfirm, status, loading }) => {
   const formatCurrency = (amount) => {
     return `₱${(parseFloat(amount) || 0).toFixed(2)}`;
   };
@@ -32,11 +33,18 @@ const CheckoutDialog = ({ open, onClose, total, onConfirm, status }) => {
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={status === 'success'}>
+        <Button onClick={onClose} disabled={status === 'success' || loading}>
           Cancel
         </Button>
-        <Button onClick={onConfirm} variant="contained" disabled={status === 'success'}>
-          Confirm
+        <Button onClick={onConfirm} variant="contained" disabled={status === 'success' || loading}>
+          {loading ? (
+            <>
+              <CircularProgress size={16} sx={{ mr: 1 }} />
+              Processing...
+            </>
+          ) : (
+            'Confirm'
+          )}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Paper, Tabs, Tab, Alert, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Tabs, Tab, Alert } from '@mui/material';
+import { ContentSkeleton } from '../../components/PageSkeleton';
 import axios from '../../api/axios';
 import SalesReport from './components/SalesReport';
 import TopProductsReport from './components/TopProductsReport';
@@ -117,8 +118,8 @@ const Reports = () => {
       </Paper>
 
       {loading && (
-        <Box display="flex" justifyContent="center" p={4}>
-          <CircularProgress size={60} />
+        <Box sx={{ py: 2 }}>
+          <ContentSkeleton lines={10} />
         </Box>
       )}
 
