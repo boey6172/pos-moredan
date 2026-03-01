@@ -43,7 +43,7 @@ const navItems = [
   { label: 'Transactions', path: '/transactions', icon: ReceiptIcon },
   { label: 'Sales Items', path: '/sales-items', icon: ReceiptIcon },
   { label: 'Expenses', path: '/expenses', icon: ReceiptIcon },
-  { label: 'Salary', path: '/salary', icon: AttachMoneyIcon },
+  { label: 'Salary', path: '/salary', icon: AttachMoneyIcon, adminOnly: true },
   { label: 'Reports', path: '/reports', icon: AssessmentIcon },
   { label: 'Users', path: '/users', icon: PeopleIcon },
 ];
@@ -90,7 +90,9 @@ const Navigation = () => {
         </Typography>
       </Toolbar>
       <List sx={{ flex: 1, px: 1, py: 2 }}>
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => !item.adminOnly || auth?.user?.role === 'admin')
+          .map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
           return (

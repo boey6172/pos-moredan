@@ -87,7 +87,15 @@ function AppRoutes() {
               />
               <Route
                 path="/salary"
-                element={auth ? <Salaries /> : <Navigate to="/login" replace />}
+                element={
+                  auth && auth.user?.role === 'admin' ? (
+                    <Salaries />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
               />
               <Route
                 path="/sales-items"

@@ -122,9 +122,9 @@ exports.getDashboardMetrics = async (req, res) => {
       });
     }
 
-    // Cash summary
+    // Cash summary (expected cash = starting + cash sales; expenses are not subtracted)
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
-    const expectedCash = startingCashAmount + cashSales - totalExpenses;
+    const expectedCash = startingCashAmount + cashSales;
 
     // Check if reconciled
     const reconciliation = await EndOfDayReconciliation.findOne({

@@ -19,7 +19,10 @@ import {
   IconButton,
   CircularProgress,
   Chip,
+  Collapse,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import TableSkeleton from '../components/TableSkeleton';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -58,6 +61,7 @@ const Salaries = () => {
   });
   const [salarySaving, setSalarySaving] = useState(false);
   const [salaryDeleting, setSalaryDeleting] = useState(null);
+  const [employeesExpanded, setEmployeesExpanded] = useState(true);
 
   const fetchEmployees = async () => {
     try {
@@ -244,57 +248,83 @@ const Salaries = () => {
       </Box>
 
       <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <PeopleIcon /> Employees
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Add employees with name and rate per hour. They can then be selected when recording salary.
-          </Typography>
-          <Button variant="outlined" startIcon={<AddIcon />} onClick={() => handleOpenEmployee()} sx={{ mb: 2 }}>
-            Add Employee
-          </Button>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Rate per hour</TableCell>
-                  <TableCell align="right">Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {employees.length === 0 ? (
+        <CardContent sx={{ py: 1, '&:last-child': { pb: 2 } }}>
+          <Box
+            onClick={() => setEmployeesExpanded((e) => !e)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              py: 1.5,
+              '&:hover': { bgcolor: 'action.hover' },
+              borderRadius: 1,
+              px: 0.5,
+              mx: -0.5,
+            }}
+            aria-expanded={employeesExpanded}
+          >
+            <Typography variant="h6" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PeopleIcon /> Employees
+              {employees.length > 0 && (
+                <Chip label={employees.length} size="small" sx={{ ml: 0.5 }} />
+              )}
+            </Typography>
+            <IconButton size="small" aria-label={employeesExpanded ? 'Collapse employees' : 'Expand employees'}>
+              {employeesExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          </Box>
+          <Collapse in={employeesExpanded}>
+            <Box onClick={(e) => e.stopPropagation()}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Add employees with name and rate per hour. They can then be selected when recording salary.
+              </Typography>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => handleOpenEmployee()} sx={{ mb: 2 }}>
+              Add Employee
+            </Button>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={3}>
-                      <Typography color="text.secondary">No employees yet. Add one to get started.</Typography>
-                    </TableCell>
+                    <TableCell>Name</TableCell>
+                    <TableCell>Rate per hour</TableCell>
+                    <TableCell align="right">Actions</TableCell>
                   </TableRow>
-                ) : (
-                  employees.map((emp) => (
-                    <TableRow key={emp.id}>
-                      <TableCell>{emp.name}</TableCell>
-                      <TableCell>{formatCurrency(emp.ratePerHour)}</TableCell>
-                      <TableCell align="right">
-                        <IconButton size="small" onClick={() => handleOpenEmployee(emp)} aria-label={`Edit ${emp.name}`}>
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteEmployee(emp.id)}
-                          disabled={employeeDeleting === emp.id}
-                          aria-label={`Delete ${emp.name}`}
-                        >
-                          {employeeDeleting === emp.id ? <CircularProgress size={20} /> : <DeleteIcon />}
-                        </IconButton>
+                </TableHead>
+                <TableBody>
+                  {employees.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3}>
+                        <Typography color="text.secondary">No employees yet. Add one to get started.</Typography>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ) : (
+                    employees.map((emp) => (
+                      <TableRow key={emp.id}>
+                        <TableCell>{emp.name}</TableCell>
+                        <TableCell>{formatCurrency(emp.ratePerHour)}</TableCell>
+                        <TableCell align="right">
+                          <IconButton size="small" onClick={() => handleOpenEmployee(emp)} aria-label={`Edit ${emp.name}`}>
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteEmployee(emp.id)}
+                            disabled={employeeDeleting === emp.id}
+                            aria-label={`Delete ${emp.name}`}
+                          >
+                            {employeeDeleting === emp.id ? <CircularProgress size={20} /> : <DeleteIcon />}
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            </Box>
+          </Collapse>
         </CardContent>
       </Card>
 
