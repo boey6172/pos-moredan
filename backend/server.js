@@ -14,6 +14,8 @@ const startingCash = require('./routes/startingcash');
 const reconciliationRoutes = require('./routes/reconciliation');
 const dashboardRoutes = require('./routes/dashboard');
 const expenseRoutes = require('./routes/expense');
+const employeeRoutes = require('./routes/employee');
+const salaryRoutes = require('./routes/salary');
 const path = require('path');
 const sequelize = require('./config/database');
 const helmet = require('helmet');
@@ -21,6 +23,8 @@ const helmet = require('helmet');
 // Ensure expense models are registered before sync (so tables are created)
 require('./models/Expense');
 require('./models/ExpenseType');
+require('./models/Employee');
+require('./models/Salary');
 
 app.use(cors({
   origin: '*' // Replace with your frontend's origin
@@ -43,6 +47,8 @@ app.use('/api/startingcash', startingCash);
 app.use('/api/reconciliation', reconciliationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/employees', employeeRoutes);
+app.use('/api/salaries', salaryRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK' });

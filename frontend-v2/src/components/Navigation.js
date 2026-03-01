@@ -27,6 +27,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,6 +43,7 @@ const navItems = [
   { label: 'Transactions', path: '/transactions', icon: ReceiptIcon },
   { label: 'Sales Items', path: '/sales-items', icon: ReceiptIcon },
   { label: 'Expenses', path: '/expenses', icon: ReceiptIcon },
+  { label: 'Salary', path: '/salary', icon: AttachMoneyIcon },
   { label: 'Reports', path: '/reports', icon: AssessmentIcon },
   { label: 'Users', path: '/users', icon: PeopleIcon },
 ];

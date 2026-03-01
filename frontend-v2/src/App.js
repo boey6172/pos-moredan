@@ -10,6 +10,7 @@ import Users from './pages/Users';
 import Categories from './pages/Categories';
 import Inventory from './pages/Inventory/index';
 import Expenses from './pages/Expenses';
+import Salaries from './pages/Salaries';
 import SalesItems from './pages/SalesItems';
 import Reports from './pages/Reports/index';
 import Navigation from './components/Navigation';
@@ -83,6 +84,10 @@ function AppRoutes() {
               <Route
                 path="/expenses"
                 element={auth ? <Expenses /> : <Navigate to="/login" replace />}
+              />
+              <Route
+                path="/salary"
+                element={auth ? <Salaries /> : <Navigate to="/login" replace />}
               />
               <Route
                 path="/sales-items"

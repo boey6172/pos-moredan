@@ -29,6 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BadgeIcon from '@mui/icons-material/Badge';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import axios from '../api/axios';
 
 const Expenses = () => {
@@ -53,6 +54,7 @@ const Expenses = () => {
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(null);
+  const [viewExpense, setViewExpense] = useState(null);
 
   const fetchExpenses = async () => {
     try {
@@ -214,6 +216,8 @@ const Expenses = () => {
     return `₱${(parseFloat(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const handleCloseView = () => setViewExpense(null);
+
   const totalExpenses = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
 
   return (
@@ -295,6 +299,14 @@ const Expenses = () => {
                         </TableCell>
                         <TableCell>{expense.creator?.username || 'Unknown'}</TableCell>
                         <TableCell align="right">
+                          <IconButton
+                            size="small"
+                            color="default"
+                            onClick={() => setViewExpense(expense)}
+                            aria-label={`View expense ${expense.id}`}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
                           <IconButton
                             size="small"
                             color="primary"
@@ -488,6 +500,104 @@ const Expenses = () => {
           <Button onClick={handleSave} variant="contained" disabled={!form.amount || !form.type || !form.location || saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!viewExpense} onClose={handleCloseView} maxWidth="sm" fullWidth>
+        <DialogTitle>View Expense</DialogTitle>
+        <DialogContent>
+          {viewExpense && (
+            <Box sx={{ pt: 1 }}>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Date
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {new Date(viewExpense.createdAt).toLocaleString()}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Amount
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                <strong>{formatCurrency(viewExpense.amount)}</strong>
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Type
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                <Chip label={viewExpense.type} size="small" color="primary" variant="outlined" />
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Location / Branch
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {viewExpense.location}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Notes
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                {viewExpense.notes || '—'}
+              </Typography>
+
+              {viewExpense.tinNumber && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="subtitle2" color="primary" gutterBottom>
+                    Tin details
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Particulars
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    {viewExpense.particulars || '—'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Tin Number
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    {viewExpense.tinNumber}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Address
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 1 }}>
+                    {viewExpense.address || '—'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Reference No
+                  </Typography>
+                  <Typography variant="body1">
+                    {viewExpense.referenceNo || '—'}
+                  </Typography>
+                </Box>
+              )}
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }} gutterBottom>
+                Created by
+              </Typography>
+              <Typography variant="body1">
+                {viewExpense.creator?.username || 'Unknown'}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseView}>Close</Button>
+          {viewExpense && (
+            <Button
+              variant="contained"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                handleCloseView();
+                handleOpen(viewExpense);
+              }}
+            >
+              Edit
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
