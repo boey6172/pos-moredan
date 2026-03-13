@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const salaryController = require('../controllers/salaryController');
-const { authenticateJWT, authorizeRoles } = require('../middleware/auth');
+const { authenticateJWT, requirePermission } = require('../middleware/auth');
 
-router.get('/', authenticateJWT, authorizeRoles('admin'), salaryController.getSalaries);
-router.post('/', authenticateJWT, authorizeRoles('admin'), salaryController.createSalary);
-router.put('/:id', authenticateJWT, authorizeRoles('admin'), salaryController.updateSalary);
-router.delete('/:id', authenticateJWT, authorizeRoles('admin'), salaryController.deleteSalary);
+router.get('/', authenticateJWT, requirePermission('salary.view'), salaryController.getSalaries);
+router.post('/', authenticateJWT, requirePermission('salary.create'), salaryController.createSalary);
+router.put('/:id', authenticateJWT, requirePermission('salary.update'), salaryController.updateSalary);
+router.delete('/:id', authenticateJWT, requirePermission('salary.delete'), salaryController.deleteSalary);
 
 module.exports = router;

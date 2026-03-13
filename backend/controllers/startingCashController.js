@@ -1,54 +1,52 @@
 const StartingCash = require('../models/StartingCash');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
+const { getDayBoundsInPH } = require('../utils/phTime');
 
 exports.createStartingCash = async (req, res) => {
   try {
     const { starting } = req.body;
-  
+
     // Validate required field
     if (starting === undefined || starting === null || starting === "") {
       return res.status(400).json({ message: "Starting cash amount is required" });
     }
-  
+
     // Validate number
     const amount = parseFloat(starting);
     if (isNaN(amount)) {
       return res.status(400).json({ message: "Starting must be a valid number" });
     }
-  
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-  
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
-  
+
+    // Use Philippine time so "today" is the current calendar day in PH
+    const now = new Date();
+    const { start: startOfDay, end: endOfDay } = getDayBoundsInPH(now);
+
     const existing = await StartingCash.findOne({
       where: {
         createdAt: {
-          [Op.between]: [today, endOfDay]
-        }
-      }
+          [Op.between]: [startOfDay, endOfDay],
+        },
+      },
     });
-  
+
     let startingCash;
-  
+
     if (existing) {
-      // Update today's starting cash with the provided amount
+      // Same date: update the existing record (e.g. user edited amount)
       existing.starting = amount;
       await existing.save();
       startingCash = existing;
     } else {
-      // Create today's starting cash using the user-provided amount
+      // New date: create a new starting cash record for today
       startingCash = await StartingCash.create({ starting: amount });
     }
-  
+
     res.status(201).json(startingCash);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to create Starting Cash", error: err.message });
   }
-  
 };
 
 exports.getStartingCash = async (req, res) => {
@@ -67,25 +65,19 @@ exports.getStartingCashByDate = async (req, res) => {
 
     let where = {};
     if (date) {
-      // Get data created within that specific day
-      // Handle timezone properly by using UTC
-      const startOfDay = new Date(date + 'T00:00:00.000Z');
-      const endOfDay = new Date(date + 'T23:59:59.999Z');
+      // Get data created within that specific day (Philippine time, UTC+8)
+      const startOfDay = new Date(date + 'T00:00:00.000+08:00');
+      const endOfDay = new Date(date + 'T23:59:59.999+08:00');
 
       where.createdAt = {
         [Op.between]: [startOfDay, endOfDay],
       };
     } else {
-      // If no date provided, default to today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(today);
-      endOfDay.setHours(23, 59, 59, 999);
-
+      // No date provided: use today in Philippine time
+      const { start: startOfDay, end: endOfDay } = getDayBoundsInPH(new Date());
       where.createdAt = {
-        [Op.between]: [today, endOfDay],
+        [Op.between]: [startOfDay, endOfDay],
       };
-      
     }
 
     const startingCash = await StartingCash.findOne({

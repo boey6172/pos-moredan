@@ -7,6 +7,8 @@ import POS from './pages/POS/index';
 import Products from './pages/Products';
 import Transactions from './pages/Transactions';
 import Users from './pages/Users';
+import Permissions from './pages/Permissions';
+import Roles from './pages/Roles';
 import Categories from './pages/Categories';
 import Inventory from './pages/Inventory/index';
 import Expenses from './pages/Expenses';
@@ -19,7 +21,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 const DRAWER_WIDTH = 280;
 
 function AppRoutes() {
-  const { auth } = useAuth();
+  const { auth, hasPermission } = useAuth();
+  const canRbac = auth?.user?.role === 'admin' || hasPermission?.('rbac.view') || hasPermission?.('rbac.manage');
 
   const getBasename = () => {
     if (process.env.REACT_APP_HOMEPAGE) {
@@ -71,7 +74,39 @@ function AppRoutes() {
               />
               <Route
                 path="/users"
-                element={auth ? <Users /> : <Navigate to="/login" replace />}
+                element={
+                  auth && (auth.user?.role === 'admin' || hasPermission?.('users.view')) ? (
+                    <Users />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/permissions"
+                element={
+                  auth && canRbac ? (
+                    <Permissions />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/roles"
+                element={
+                  auth && canRbac ? (
+                    <Roles />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
               />
               <Route
                 path="/categories"
@@ -88,7 +123,7 @@ function AppRoutes() {
               <Route
                 path="/salary"
                 element={
-                  auth && auth.user?.role === 'admin' ? (
+                  auth && (auth.user?.role === 'admin' || hasPermission?.('salary.view')) ? (
                     <Salaries />
                   ) : auth ? (
                     <Navigate to="/dashboard" replace />

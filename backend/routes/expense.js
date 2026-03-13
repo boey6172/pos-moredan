@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const expenseController = require('../controllers/expenseController');
-const { authenticateJWT } = require('../middleware/auth');
+const { authenticateJWT, requirePermission } = require('../middleware/auth');
 
-router.get('/', authenticateJWT, expenseController.getExpenses);
-router.get('/types', authenticateJWT, expenseController.getExpenseTypes);
-router.get('/tin-profiles', authenticateJWT, expenseController.getTinProfiles);
-router.post('/types', authenticateJWT, expenseController.createExpenseType);
-router.post('/', authenticateJWT, expenseController.createExpense);
-router.put('/:id', authenticateJWT, expenseController.updateExpense);
-router.delete('/:id', authenticateJWT, expenseController.deleteExpense);
+router.get('/', authenticateJWT, requirePermission('expenses.view'), expenseController.getExpenses);
+router.get('/types', authenticateJWT, requirePermission('expenses.view'), expenseController.getExpenseTypes);
+router.get('/tin-profiles', authenticateJWT, requirePermission('expenses.view'), expenseController.getTinProfiles);
+router.post('/types', authenticateJWT, requirePermission('expenses.create'), expenseController.createExpenseType);
+router.post('/', authenticateJWT, requirePermission('expenses.create'), expenseController.createExpense);
+router.put('/:id', authenticateJWT, requirePermission('expenses.update'), expenseController.updateExpense);
+router.delete('/:id', authenticateJWT, requirePermission('expenses.delete'), expenseController.deleteExpense);
 
 module.exports = router;

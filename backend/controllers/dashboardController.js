@@ -6,31 +6,28 @@ const Expense = require('../models/Expense');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
 const { calculatePaymentMethodTotals } = require('../utils/paymentUtils');
+const { getDayBoundsInPH, getDateStringInPH } = require('../utils/phTime');
 
-// Get dashboard metrics
+// Get dashboard metrics (all "today" uses Philippine time so server timezone does not matter)
 exports.getDashboardMetrics = async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { start: startOfDay, end: endOfDay } = getDayBoundsInPH(new Date());
 
-    // Get starting cash
+    // Get starting cash for today (PH)
     const startingCash = await StartingCash.findOne({
       where: {
         createdAt: {
-          [Op.gte]: today,
-          [Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          [Op.between]: [startOfDay, endOfDay]
         }
       },
       order: [["createdAt", "DESC"]]
     });
 
-    // Get today's transactions
+    // Get today's transactions (PH day)
     const transactions = await Transaction.findAll({
       where: {
         createdAt: {
-          [Op.between]: [today, endOfDay]
+          [Op.between]: [startOfDay, endOfDay]
         }
       },
       include: [{ model: require('../models/User'), as: 'cashier', attributes: ['id', 'username'] }]
@@ -58,11 +55,11 @@ exports.getDashboardMetrics = async (req, res) => {
     const totalTransactions = transactions.length;
     const averageTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
 
-    // Get today's expenses
+    // Get today's expenses (PH day)
     const todayExpenses = await Expense.findAll({
       where: {
         createdAt: {
-          [Op.between]: [today, endOfDay]
+          [Op.between]: [startOfDay, endOfDay]
         }
       }
     });
@@ -100,13 +97,12 @@ exports.getDashboardMetrics = async (req, res) => {
         };
       });
 
-    // Get sales by hour for today (for chart)
+    // Get sales by hour for today in PH (for chart)
     const salesByHour = [];
+    const todayStr = getDateStringInPH(new Date());
     for (let hour = 0; hour < 24; hour++) {
-      const hourStart = new Date(today);
-      hourStart.setHours(hour, 0, 0, 0);
-      const hourEnd = new Date(today);
-      hourEnd.setHours(hour, 59, 59, 999);
+      const hourStart = new Date(`${todayStr}T${String(hour).padStart(2, '0')}:00:00.000+08:00`);
+      const hourEnd = new Date(`${todayStr}T${String(hour).padStart(2, '0')}:59:59.999+08:00`);
 
       const hourTransactions = transactions.filter(tx => {
         const txDate = new Date(tx.createdAt);
@@ -126,10 +122,10 @@ exports.getDashboardMetrics = async (req, res) => {
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
     const expectedCash = startingCashAmount + cashSales;
 
-    // Check if reconciled
+    // Check if reconciled (use PH date)
     const reconciliation = await EndOfDayReconciliation.findOne({
       where: {
-        date: today.toISOString().split('T')[0]
+        date: getDateStringInPH(new Date())
       }
     });
 

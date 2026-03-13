@@ -28,11 +28,15 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import axios from '../api/axios';
+import { useAuth } from '../contexts/AuthContext';
 
-const emptyUser = { username: '', role: 'cashier', password: '' };
+const emptyUser = { username: '', roleId: '', password: '' };
 
 const Users = () => {
+  const { auth } = useAuth();
+  const currentUserId = auth?.user?.id;
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState(null);
   const [form, setForm] = useState(emptyUser);
@@ -56,13 +60,24 @@ const Users = () => {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const res = await axios.get('/api/roles');
+      setRoles(res.data);
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+      setRoles([]);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
 
   const handleOpen = (user = null) => {
     setEdit(user);
-    setForm(user ? { ...user, password: '' } : emptyUser);
+    setForm(user ? { username: user.username, roleId: user.roleId || '', password: '' } : emptyUser);
     setOpen(true);
   };
 
@@ -73,13 +88,13 @@ const Users = () => {
   };
 
   const handleSave = async () => {
-    if (saving) return; // Prevent double-click
+    if (saving) return;
     setSaving(true);
     try {
       if (edit) {
-        await axios.put(`/api/users/${edit.id}`, { username: form.username, role: form.role });
+        await axios.put(`/api/users/${edit.id}`, { username: form.username, roleId: form.roleId });
       } else {
-        await axios.post('/api/users', form);
+        await axios.post('/api/users', { username: form.username, password: form.password, roleId: form.roleId });
       }
       fetchUsers();
       handleClose();
@@ -152,9 +167,9 @@ const Users = () => {
                         <TableCell>{user.username}</TableCell>
                         <TableCell>
                           <Chip
-                            label={user.role || 'user'}
+                            label={user.roleName || user.role || '—'}
                             size="small"
-                            color={user.role === 'admin' ? 'primary' : 'default'}
+                            color={user.role === 'admin' || user.roleName === 'Admin' ? 'primary' : 'default'}
                           />
                         </TableCell>
                         <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
@@ -179,8 +194,9 @@ const Users = () => {
                             size="small"
                             color="error"
                             onClick={() => handleDelete(user.id)}
-                            disabled={deleting === user.id}
-                            aria-label={`Delete user ${user.username}`}
+                            disabled={deleting === user.id || user.id === currentUserId}
+                            aria-label={user.id === currentUserId ? 'Cannot delete your own account' : `Delete user ${user.username}`}
+                            title={user.id === currentUserId ? 'You cannot delete your own account' : ''}
                           >
                             {deleting === user.id ? <CircularProgress size={20} /> : <DeleteIcon />}
                           </IconButton>
@@ -218,14 +234,17 @@ const Users = () => {
           <TextField
             select
             label="Role"
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
+            value={form.roleId}
+            onChange={(e) => setForm({ ...form, roleId: e.target.value })}
             fullWidth
             margin="normal"
             required
+            helperText={edit?.id === currentUserId ? 'You cannot change your own role.' : ''}
+            disabled={edit?.id === currentUserId}
           >
-            <MenuItem value="cashier">Cashier</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
+            {roles.map((r) => (
+              <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
+            ))}
           </TextField>
           {!edit && (
             <TextField
@@ -241,7 +260,7 @@ const Users = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={saving}>Cancel</Button>
-          <Button onClick={handleSave} variant="contained" disabled={!form.username || (!edit && !form.password) || saving}>
+          <Button onClick={handleSave} variant="contained" disabled={!form.username || !form.roleId || (!edit && !form.password) || saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>

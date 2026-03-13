@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const reconciliationController = require('../controllers/reconciliationController');
-const { authenticateJWT, authorizeRoles } = require('../middleware/auth');
+const { authenticateJWT, requirePermission } = require('../middleware/auth');
 
-router.get('/today', authenticateJWT, reconciliationController.getTodayReconciliation);
-router.post('/close', authenticateJWT, reconciliationController.closeDay);
-router.get('/history', authenticateJWT, authorizeRoles('admin'), reconciliationController.getReconciliationHistory);
+router.get('/today', authenticateJWT, requirePermission('reconciliation.view'), reconciliationController.getTodayReconciliation);
+router.post('/close', authenticateJWT, requirePermission('reconciliation.close'), reconciliationController.closeDay);
+router.get('/history', authenticateJWT, requirePermission('reconciliation.view'), reconciliationController.getReconciliationHistory);
 
 module.exports = router;
 

@@ -8,18 +8,25 @@ const ReportSummary = ({ salesData }) => {
   const averageSale = calculateAverageSale(salesData);
 
   return (
-    <Paper sx={{ p: { xs: 2, md: 3 }, height: { xs: 'auto', md: 600 }, width: '100%' }}>
+    <Paper
+      sx={{
+        p: { xs: 2, md: 3 },
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
       <Typography variant="h6" mb={3}>
         Summary
       </Typography>
-      <Box>
-        <Typography variant="h6" color="text.secondary" mb={2}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+        <Typography variant="h6" color="text.secondary" mb={0}>
           Total Sales: {formatCurrency(totalSales)}
         </Typography>
-        <Typography variant="h6" color="text.secondary" mb={2}>
+        <Typography variant="h6" color="text.secondary" mb={0}>
           Total Transactions: {totalTransactions}
         </Typography>
-        <Typography variant="h6" color="text.secondary">
+        <Typography variant="h6" color="text.secondary" mb={0}>
           Average Sale: {formatCurrency(averageSale)}
         </Typography>
       </Box>

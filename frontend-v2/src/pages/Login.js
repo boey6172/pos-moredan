@@ -88,7 +88,7 @@ const Login = () => {
             gutterBottom
             sx={{ fontWeight: 600, mb: 3, textAlign: 'center' }}
           >
-            POS System
+            Pidols Bakery 
           </Typography>
           <Typography
             variant="body2"

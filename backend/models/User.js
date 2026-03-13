@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const Role = require('./Role');
 
 const User = sequelize.define('User', {
   id: {
@@ -21,6 +22,13 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: 'cashier',
   },
+  roleId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'Roles', key: 'id' },
+  },
 });
+
+User.belongsTo(Role, { foreignKey: 'roleId', as: 'roleRef' });
 
 module.exports = User; 

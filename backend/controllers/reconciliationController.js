@@ -4,31 +4,28 @@ const StartingCash = require('../models/StartingCash');
 const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
 const { getCashAmount, getNonCashAmount } = require('../utils/paymentUtils');
+const { getDayBoundsInPH, getDateStringInPH } = require('../utils/phTime');
 
-// Get today's reconciliation data (for dashboard and closing)
+// Get today's reconciliation data (Philippine time)
 exports.getTodayReconciliation = async (req, res) => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const { start: startOfDay, end: endOfDay } = getDayBoundsInPH(new Date());
 
-    // Get starting cash for today
+    // Get starting cash for today (PH)
     const startingCash = await StartingCash.findOne({
       where: {
         createdAt: {
-          [Op.gte]: today,
-          [Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          [Op.between]: [startOfDay, endOfDay]
         }
       },
       order: [["createdAt", "DESC"]]
     });
 
-    // Get today's transactions
+    // Get today's transactions (PH)
     const transactions = await Transaction.findAll({
       where: {
         createdAt: {
-          [Op.between]: [today, endOfDay]
+          [Op.between]: [startOfDay, endOfDay]
         }
       }
     });
@@ -50,10 +47,10 @@ exports.getTodayReconciliation = async (req, res) => {
     const startingCashAmount = startingCash ? parseFloat(startingCash.starting || 0) : 0;
     const expectedCash = startingCashAmount + totalCashSales;
 
-    // Check if already reconciled today
+    // Check if already reconciled today (PH date)
     const reconciliation = await EndOfDayReconciliation.findOne({
       where: {
-        date: today.toISOString().split('T')[0]
+        date: getDateStringInPH(new Date())
       },
       include: [{ model: require('../models/User'), as: 'closedByUser', attributes: ['id', 'username'] }]
     });
@@ -77,15 +74,12 @@ exports.getTodayReconciliation = async (req, res) => {
   }
 };
 
-// Close day / Create reconciliation
+// Close day / Create reconciliation (Philippine time)
 exports.closeDay = async (req, res) => {
   try {
     const { actualCash, notes } = req.body;
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
-    today.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const dateStr = getDateStringInPH(new Date());
+    const { start: startOfDay, end: endOfDay } = getDayBoundsInPH(new Date());
 
     // Check if already closed
     const existing = await EndOfDayReconciliation.findOne({
@@ -96,22 +90,21 @@ exports.closeDay = async (req, res) => {
       return res.status(400).json({ message: 'Day has already been closed' });
     }
 
-    // Get starting cash
+    // Get starting cash for today (PH)
     const startingCash = await StartingCash.findOne({
       where: {
         createdAt: {
-          [Op.gte]: today,
-          [Op.lt]: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+          [Op.between]: [startOfDay, endOfDay]
         }
       },
       order: [["createdAt", "DESC"]]
     });
 
-    // Get today's transactions
+    // Get today's transactions (PH)
     const transactions = await Transaction.findAll({
       where: {
         createdAt: {
-          [Op.between]: [today, endOfDay]
+          [Op.between]: [startOfDay, endOfDay]
         }
       }
     });

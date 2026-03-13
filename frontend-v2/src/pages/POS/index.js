@@ -9,7 +9,14 @@ import {
   Button,
   Alert,
   Fab,
+  TextField,
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { POSProductSkeleton } from '../../components/PageSkeleton';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
@@ -46,6 +53,9 @@ const POS = () => {
   const [addedProductName, setAddedProductName] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [productFilter, setProductFilter] = useState('');
+  const [sortByName, setSortByName] = useState('');
+  const [sortByStock, setSortByStock] = useState('');
   const receiptRef = React.useRef(null);
 
   useEffect(() => {
@@ -80,9 +90,43 @@ const POS = () => {
     };
   }, []);
 
+  const filteredProducts = useMemo(() => {
+    const trimmed = (productFilter || '').trim();
+    let list = products;
+    if (trimmed.length >= 2) {
+      const lower = trimmed.toLowerCase();
+      list = products.filter(
+        (p) =>
+          (p.name && p.name.toLowerCase().includes(lower)) ||
+          (p.barcode && String(p.barcode).toLowerCase().includes(lower))
+      );
+    }
+    return list;
+  }, [products, productFilter]);
+
+  const sortedProducts = useMemo(() => {
+    const list = [...filteredProducts];
+    const stockVal = (p) => Number(p.inventory ?? 0);
+    const nameVal = (p) => (p.name || '').toLowerCase();
+    if (!sortByStock && !sortByName) return list;
+    list.sort((a, b) => {
+      if (sortByStock === 'desc') {
+        const d = stockVal(b) - stockVal(a);
+        if (d !== 0) return d;
+      } else if (sortByStock === 'asc') {
+        const d = stockVal(a) - stockVal(b);
+        if (d !== 0) return d;
+      }
+      if (sortByName === 'asc') return nameVal(a).localeCompare(nameVal(b));
+      if (sortByName === 'desc') return nameVal(b).localeCompare(nameVal(a));
+      return 0;
+    });
+    return list;
+  }, [filteredProducts, sortByName, sortByStock]);
+
   const groupedProducts = useMemo(
-    () => groupProductsByCategory(products, CATEGORY_ORDER),
-    [products]
+    () => groupProductsByCategory(sortedProducts, CATEGORY_ORDER),
+    [sortedProducts]
   );
 
   const subtotal = useMemo(() => calculateSubtotal(cart), [cart]);
@@ -264,6 +308,50 @@ const POS = () => {
         onQuantityIncrease={(id) => changeQuantity(id, 1)}
       />
 
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }}>
+        <TextField
+          size="small"
+          placeholder="Filter products (2+ characters)"
+          value={productFilter}
+          onChange={(e) => setProductFilter(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ minWidth: 220, maxWidth: 400 }}
+          inputProps={{ 'aria-label': 'Filter products by name or barcode' }}
+        />
+        <FormControl size="small" sx={{ minWidth: 140 }}>
+          <InputLabel id="sort-name-label">Sort by name</InputLabel>
+          <Select
+            labelId="sort-name-label"
+            value={sortByName}
+            label="Sort by name"
+            onChange={(e) => setSortByName(e.target.value)}
+          >
+            <MenuItem value="">Default</MenuItem>
+            <MenuItem value="asc">A–Z</MenuItem>
+            <MenuItem value="desc">Z–A</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="sort-stock-label">Sort by stock</InputLabel>
+          <Select
+            labelId="sort-stock-label"
+            value={sortByStock}
+            label="Sort by stock"
+            onChange={(e) => setSortByStock(e.target.value)}
+          >
+            <MenuItem value="">Default</MenuItem>
+            <MenuItem value="desc">High to low</MenuItem>
+            <MenuItem value="asc">Low to high</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
       {Object.entries(groupedProducts).map(([categoryName, categoryProducts]) => (
         <Accordion key={categoryName} sx={{ mb: 2 }}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -326,7 +414,7 @@ const POS = () => {
         name={customerName}
         setName={setCustomerName}
         onProceed={handleCustomerNameSubmit}
-        onCancel={() => (window.location.href = '/moredansmv/dashboard')}
+        onCancel={() => (window.location.href = '/pidolsbakery/dashboard')}
       />
 
       <CheckoutDialog

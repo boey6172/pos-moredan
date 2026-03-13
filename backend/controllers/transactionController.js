@@ -189,21 +189,44 @@ exports.updateTransaction = async (req, res) => {
 
     if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
-    // Restore inventory from old items
-    for (const oldItem of transaction.TransactionItems) {
-      const product = await Product.findByPk(oldItem.productId);
-      product.inventory += oldItem.quantity;
+    const oldItems = transaction.TransactionItems || transaction.transactionItems || [];
+    const oldQtyByProduct = {};
+    for (const oldItem of oldItems) {
+      const pid = oldItem.productId;
+      oldQtyByProduct[pid] = (oldQtyByProduct[pid] || 0) + Number(oldItem.quantity || 0);
+    }
+
+    const newQtyByProduct = {};
+    for (const item of items) {
+      const pid = item.productId;
+      newQtyByProduct[pid] = (newQtyByProduct[pid] || 0) + Number(item.quantity || 0);
+    }
+
+    const allProductIds = new Set([...Object.keys(oldQtyByProduct).map(Number), ...Object.keys(newQtyByProduct).map(Number)]);
+
+    for (const productId of allProductIds) {
+      const oldQty = oldQtyByProduct[productId] || 0;
+      const newQty = newQtyByProduct[productId] || 0;
+      const delta = newQty - oldQty;
+      if (delta === 0) continue;
+
+      const product = await Product.findByPk(productId);
+      if (!product) throw new Error(`Product not found: ${productId}`);
+
+      const currentInventory = Number(product.inventory ?? 0);
+      const afterAdjust = currentInventory - delta;
+      if (afterAdjust < 0) throw new Error(`Insufficient stock for: ${product.name} (need ${delta} more, have ${currentInventory})`);
+
+      product.inventory = afterAdjust;
       await product.save({ transaction: t });
     }
 
-    // Delete old items
     await TransactionItem.destroy({ where: { transactionId }, transaction: t });
 
     let subtotal = 0;
     for (const item of items) {
       const product = await Product.findByPk(item.productId);
       if (!product) throw new Error(`Product not found: ${item.productId}`);
-      if (product.inventory < item.quantity) throw new Error(`Insufficient stock for: ${product.name}`);
 
       const itemSubtotal = parseFloat(product.price) * item.quantity;
       subtotal += itemSubtotal;
@@ -215,9 +238,6 @@ exports.updateTransaction = async (req, res) => {
         price: product.price,
         subtotal: itemSubtotal
       }, { transaction: t });
-
-      product.inventory -= item.quantity;
-      await product.save({ transaction: t });
     }
 
     const newTotal = Math.max(0, subtotal - parseFloat(discount || 0));

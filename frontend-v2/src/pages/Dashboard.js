@@ -48,6 +48,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import RemoveIcon from '@mui/icons-material/Remove';
 
+// Today's date in Philippine time (matches backend) so dashboard is correct regardless of server/client timezone
+const getTodayInPH = () =>
+  new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+
 const Dashboard = () => {
   const [cash, setCash] = useState('');
   const [startingCash, setStartingCash] = useState(null);
@@ -61,14 +65,14 @@ const Dashboard = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayInPH();
 
       const startingCashRes = await axios.get('/api/startingcash', {
         params: { date: today },
       });
 
       if (startingCashRes.data && startingCashRes.data.length >= 1) {
-        const cashDate = new Date(startingCashRes.data[0].createdAt).toISOString().split('T')[0];
+        const cashDate = new Date(startingCashRes.data[0].createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
         if (cashDate === today) {
           setStartingCash(parseFloat(startingCashRes.data[0].starting || 0));
         } else {
@@ -89,11 +93,11 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    let lastCheckedDate = new Date().toISOString().split('T')[0];
+    let lastCheckedDate = getTodayInPH();
     fetchData();
 
     const refreshInterval = setInterval(() => {
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = getTodayInPH();
       if (currentDate !== lastCheckedDate) {
         setStartingCash(null);
         lastCheckedDate = currentDate;
@@ -105,8 +109,10 @@ const Dashboard = () => {
   }, []);
 
   const handleSaveStartingCash = async () => {
+    const valueToSave = cash !== '' ? cash : (startingCash != null ? String(startingCash) : '');
+    if (!valueToSave) return;
     try {
-      await axios.post('/api/startingcash', { starting: parseFloat(cash) });
+      await axios.post('/api/startingcash', { starting: parseFloat(valueToSave) });
       await fetchData();
       setCash('');
     } catch (err) {
@@ -188,47 +194,33 @@ const Dashboard = () => {
         </Tooltip>
       </Box>
 
-      {/* Starting Cash Section */}
+      {/* Starting Cash Section - always editable */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          {startingCash !== null ? (
-            <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Starting Cash
-                </Typography>
-                <Typography variant="h3" color="primary" sx={{ fontWeight: 600 }}>
-                  {formatCurrency(startingCash)}
-                </Typography>
-              </Box>
-              <CheckCircleIcon color="success" sx={{ fontSize: 48 }} />
+          <Box>
+            <Typography variant="h6" gutterBottom>
+              {startingCash !== null ? 'Starting Cash for Today' : 'Enter Starting Cash for Today'}
+            </Typography>
+            <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+              <TextField
+                type="number"
+                label="Starting Cash"
+                value={cash !== '' ? cash : (startingCash != null ? String(startingCash) : '')}
+                onChange={(e) => setCash(e.target.value)}
+                sx={{ flex: 1, minWidth: 200 }}
+                inputProps={{ step: '0.01', min: '0' }}
+                aria-label="Starting cash amount"
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSaveStartingCash}
+                disabled={!(cash !== '' ? cash : (startingCash != null ? String(startingCash) : ''))}
+              >
+                Save
+              </Button>
             </Box>
-          ) : (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Enter Starting Cash for Today
-              </Typography>
-              <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-                <TextField
-                  type="number"
-                  label="Starting Cash"
-                  value={cash}
-                  onChange={(e) => setCash(e.target.value)}
-                  sx={{ flex: 1, minWidth: 200 }}
-                  inputProps={{ step: '0.01', min: '0' }}
-                  aria-label="Starting cash amount"
-                />
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleSaveStartingCash}
-                  disabled={!cash}
-                >
-                  Save
-                </Button>
-              </Box>
-            </Box>
-          )}
+          </Box>
         </CardContent>
       </Card>
 

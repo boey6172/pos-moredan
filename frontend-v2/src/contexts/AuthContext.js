@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import axios from '../api/axios';
 
 const AuthContext = createContext();
 
@@ -7,13 +8,25 @@ export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState(() => {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
-    return token ? { token, user: JSON.parse(user) } : null;
+    return token ? { token, user: user ? JSON.parse(user) : null } : null;
   });
 
   const login = (data) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     setAuth(data);
+  };
+
+  const refreshUser = async () => {
+    if (!auth?.token) return;
+    try {
+      const res = await axios.get('/api/auth/me');
+      const user = res.data.user;
+      localStorage.setItem('user', JSON.stringify(user));
+      setAuth((prev) => (prev ? { ...prev, user } : null));
+    } catch {
+      // ignore
+    }
   };
 
   const logout = () => {
@@ -28,14 +41,12 @@ export const AuthProvider = ({ children }) => {
     if (auth?.token) {
       try {
         const decoded = jwtDecode(auth.token);
-        const exp = decoded.exp * 1000; // convert to milliseconds
+        const exp = decoded.exp * 1000;
         const now = Date.now();
 
         if (exp < now) {
-          // Token already expired
           logout();
         } else {
-          // Token still valid, set a timer
           logoutTimer = setTimeout(logout, exp - now);
         }
       } catch (err) {
@@ -49,8 +60,16 @@ export const AuthProvider = ({ children }) => {
     };
   }, [auth]);
 
+  useEffect(() => {
+    if (auth?.token && auth?.user && (!auth.user.permissions || auth.user.permissions.length === 0)) {
+      refreshUser();
+    }
+  }, [auth?.token]);
+
+  const hasPermission = (code) => auth?.user?.permissions?.includes(code) || auth?.user?.role === 'admin';
+
   return (
-    <AuthContext.Provider value={{ auth, login, logout }}>
+    <AuthContext.Provider value={{ auth, login, logout, refreshUser, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

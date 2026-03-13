@@ -83,19 +83,37 @@ exports.getSalesReport = async (req, res) => {
 
 exports.getTopProducts = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 5;
-    
-    // Use a raw query to ensure proper column naming
+    const limitParam = req.query.limit;
+    const limit = limitParam === 'all' || limitParam === '' ? 9999 : Math.max(1, parseInt(limitParam, 10) || 5);
+    const { startDate, endDate } = req.query;
+
+    let dateClause = '';
+    const replacements = { limit };
+
+    if (startDate && endDate) {
+      dateClause = ' AND t."createdAt" BETWEEN :startDate AND :endDate';
+      replacements.startDate = new Date(startDate);
+      replacements.endDate = new Date(endDate);
+    } else if (startDate) {
+      dateClause = ' AND t."createdAt" >= :startDate';
+      replacements.startDate = new Date(startDate);
+    } else if (endDate) {
+      dateClause = ' AND t."createdAt" <= :endDate';
+      replacements.endDate = new Date(endDate);
+    }
+
     const topProductsData = await sequelize.query(`
       SELECT 
         ti."productId",
         SUM(ti.quantity) as "totalSold"
       FROM "TransactionItems" ti
+      INNER JOIN "Transactions" t ON t.id = ti."transactionId"
+      WHERE 1=1 ${dateClause}
       GROUP BY ti."productId"
       ORDER BY "totalSold" DESC
       LIMIT :limit
     `, {
-      replacements: { limit },
+      replacements,
       type: Sequelize.QueryTypes.SELECT
     });
 

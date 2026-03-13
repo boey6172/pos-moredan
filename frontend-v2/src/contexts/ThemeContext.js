@@ -4,15 +4,18 @@ import CssBaseline from '@mui/material/CssBaseline';
 
 const ThemeContext = createContext();
 
+// Brand orange: app bar & selected nav (light + dark)
+const primaryOrange = {
+  main: 'rgb(236, 128, 39)',   // #ec8027 – top bar & selected item
+  light: 'rgb(255, 167, 92)',
+  dark: 'rgb(193, 121, 21)',    // #c17915 – hover on selected
+  contrastText: '#ffffff',
+};
+
 // Eye-friendly color palettes
 const lightPalette = {
   mode: 'light',
-  primary: {
-    main: '#1976d2', // Professional blue
-    light: '#42a5f5',
-    dark: '#1565c0',
-    contrastText: '#ffffff',
-  },
+  primary: primaryOrange,
   secondary: {
     main: '#9c27b0', // Purple accent
     light: '#ba68c8',
@@ -52,12 +55,7 @@ const lightPalette = {
 
 const darkPalette = {
   mode: 'dark',
-  primary: {
-    main: '#90caf9', // Softer blue for dark mode
-    light: '#e3f2fd',
-    dark: '#42a5f5',
-    contrastText: '#000000',
-  },
+  primary: primaryOrange,
   secondary: {
     main: '#ce93d8', // Softer purple
     light: '#f3e5f5',

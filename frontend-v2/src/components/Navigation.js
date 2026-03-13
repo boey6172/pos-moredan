@@ -28,6 +28,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import SecurityIcon from '@mui/icons-material/Security';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,9 +44,11 @@ const navItems = [
   { label: 'Transactions', path: '/transactions', icon: ReceiptIcon },
   { label: 'Sales Items', path: '/sales-items', icon: ReceiptIcon },
   { label: 'Expenses', path: '/expenses', icon: ReceiptIcon },
-  { label: 'Salary', path: '/salary', icon: AttachMoneyIcon, adminOnly: true },
+  { label: 'Salary', path: '/salary', icon: AttachMoneyIcon, permission: 'salary.view' },
   { label: 'Reports', path: '/reports', icon: AssessmentIcon },
-  { label: 'Users', path: '/users', icon: PeopleIcon },
+  { label: 'Users', path: '/users', icon: PeopleIcon, permission: 'users.view' },
+  { label: 'Permissions', path: '/permissions', icon: SecurityIcon, rbacOnly: true },
+  { label: 'Roles', path: '/roles', icon: SecurityIcon, rbacOnly: true },
 ];
 
 const Navigation = () => {
@@ -54,8 +57,9 @@ const Navigation = () => {
   const location = useLocation();
   const theme = useTheme();
   const { toggleMode, mode } = useCustomTheme();
-  const { logout, auth } = useAuth();
+  const { logout, auth, hasPermission } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const canRbac = hasPermission?.('rbac.view') || hasPermission?.('rbac.manage');
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -91,7 +95,11 @@ const Navigation = () => {
       </Toolbar>
       <List sx={{ flex: 1, px: 1, py: 2 }}>
         {navItems
-          .filter((item) => !item.adminOnly || auth?.user?.role === 'admin')
+          .filter((item) => {
+            if (item.permission && auth?.user?.role !== 'admin' && !hasPermission?.(item.permission)) return false;
+            if (item.rbacOnly && !canRbac) return false;
+            return true;
+          })
           .map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;

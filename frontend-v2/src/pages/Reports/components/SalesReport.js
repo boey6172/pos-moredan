@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import SalesTrendChart from './SalesTrendChart';
 import ReportSummary from './ReportSummary';
 import SalesReportFilters from './SalesReportFilters';
@@ -25,14 +25,14 @@ const SalesReport = ({
         onEndDateChange={onEndDateChange}
       />
 
-      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
-        <Grid item xs={12} sm={12} md={7} lg={8}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 }, width: '100%' }}>
+        <Box sx={{ width: '100%', minHeight: 280 }}>
           <SalesTrendChart data={salesData} />
-        </Grid>
-        <Grid item xs={12} sm={12} md={5} lg={4}>
+        </Box>
+        <Box sx={{ width: '100%' }}>
           <ReportSummary salesData={salesData} />
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       <Paper sx={{ mt: { xs: 3, md: 4 }, p: { xs: 1.5, sm: 2, md: 3 } }}>
         <Typography variant="h6" mb={{ xs: 2, md: 3 }} sx={{ fontSize: { xs: '1.1rem', md: '1.25rem' } }}>

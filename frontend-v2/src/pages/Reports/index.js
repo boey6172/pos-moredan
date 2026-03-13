@@ -21,6 +21,8 @@ const Reports = () => {
   // Top Products State
   const [topProducts, setTopProducts] = useState([]);
   const [topProductsLimit, setTopProductsLimit] = useState(5);
+  const [topProductsStartDate, setTopProductsStartDate] = useState('');
+  const [topProductsEndDate, setTopProductsEndDate] = useState('');
 
   // Low Stock State
   const [lowStockProducts, setLowStockProducts] = useState([]);
@@ -34,7 +36,7 @@ const Reports = () => {
     } else if (activeTab === 2) {
       fetchLowStock();
     }
-  }, [activeTab, salesPeriod, topProductsLimit, lowStockThreshold, startDate, endDate]);
+  }, [activeTab, salesPeriod, topProductsLimit, lowStockThreshold, startDate, endDate, topProductsStartDate, topProductsEndDate]);
 
   const fetchSalesReport = async () => {
     setLoading(true);
@@ -56,7 +58,10 @@ const Reports = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.get(`/api/reports/top-products?limit=${topProductsLimit}`);
+      const params = new URLSearchParams({ limit: '9999' });
+      if (topProductsStartDate) params.set('startDate', topProductsStartDate);
+      if (topProductsEndDate) params.set('endDate', topProductsEndDate);
+      const response = await axios.get(`/api/reports/top-products?${params.toString()}`);
       setTopProducts(formatTopProductsData(response.data));
     } catch (err) {
       setError('Failed to fetch top products');
@@ -141,6 +146,10 @@ const Reports = () => {
               topProducts={topProducts}
               limit={topProductsLimit}
               onLimitChange={setTopProductsLimit}
+              startDate={topProductsStartDate}
+              endDate={topProductsEndDate}
+              onStartDateChange={setTopProductsStartDate}
+              onEndDateChange={setTopProductsEndDate}
             />
           )}
           {activeTab === 2 && (

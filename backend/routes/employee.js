@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const employeeController = require('../controllers/employeeController');
-const { authenticateJWT, authorizeRoles } = require('../middleware/auth');
+const { authenticateJWT, requirePermission } = require('../middleware/auth');
 
-router.get('/', authenticateJWT, authorizeRoles('admin'), employeeController.getEmployees);
-router.post('/', authenticateJWT, authorizeRoles('admin'), employeeController.createEmployee);
-router.put('/:id', authenticateJWT, authorizeRoles('admin'), employeeController.updateEmployee);
-router.delete('/:id', authenticateJWT, authorizeRoles('admin'), employeeController.deleteEmployee);
+router.get('/', authenticateJWT, requirePermission('employees.view'), employeeController.getEmployees);
+router.post('/', authenticateJWT, requirePermission('employees.create'), employeeController.createEmployee);
+router.put('/:id', authenticateJWT, requirePermission('employees.update'), employeeController.updateEmployee);
+router.delete('/:id', authenticateJWT, requirePermission('employees.delete'), employeeController.deleteEmployee);
 
 module.exports = router;
