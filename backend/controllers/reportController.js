@@ -201,7 +201,7 @@ exports.getSalesItemsByCategory = async (req, res) => {
               attributes: ['id', 'name']
             }
           ],
-          attributes: ['id', 'name', 'sku', 'price']
+          attributes: ['id', 'name', 'sku', 'price', 'inventory']
         }
       ],
       attributes: ['id', 'quantity', 'price', 'subtotal']
@@ -243,12 +243,47 @@ exports.getSalesItemsByCategory = async (req, res) => {
       groupedByCategory[categoryName].totalRevenue += parseFloat(item.subtotal);
     });
 
+    // Build product-level summary: beginning stocks, sold in period, remaining stocks
+    const productMap = {};
+    salesItems.forEach(item => {
+      const productId = item.Product?.id;
+      if (!productId) return;
+      const categoryName = item.Product?.Category?.name || 'Uncategorized';
+      const productName = item.Product?.name;
+      const remaining = Number(item.Product?.inventory ?? 0);
+      if (!productMap[productId]) {
+        productMap[productId] = {
+          productId,
+          productName,
+          categoryName,
+          soldInPeriod: 0,
+          remainingStock: remaining,
+        };
+      }
+      productMap[productId].soldInPeriod += item.quantity;
+    });
+    const productStockSummary = Object.values(productMap)
+      .map(p => ({
+        productId: p.productId,
+        productName: p.productName,
+        categoryName: p.categoryName,
+        beginningStock: p.remainingStock + p.soldInPeriod,
+        soldInPeriod: p.soldInPeriod,
+        remainingStock: p.remainingStock,
+      }))
+      .sort((a, b) => a.categoryName.localeCompare(b.categoryName) || a.productName.localeCompare(b.productName));
+
+    // Category totals: total quantity sold per category
+    const categoryTotals = Object.values(groupedByCategory)
+      .sort((a, b) => a.categoryName.localeCompare(b.categoryName))
+      .map(c => ({ categoryName: c.categoryName, totalSold: c.totalQuantity }));
+
     // Convert to array and sort by category name
-    const result = Object.values(groupedByCategory).sort((a, b) => 
+    const categories = Object.values(groupedByCategory).sort((a, b) =>
       a.categoryName.localeCompare(b.categoryName)
     );
 
-    res.json(result);
+    res.json({ categories, productStockSummary, categoryTotals });
   } catch (err) {
     console.error('Error in getSalesItemsByCategory:', err);
     res.status(500).json({ message: 'Failed to fetch sales items by category', error: err.message });

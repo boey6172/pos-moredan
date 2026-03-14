@@ -38,6 +38,8 @@ import axios from '../api/axios';
 
 const SalesItems = () => {
   const [salesData, setSalesData] = useState([]);
+  const [productStockSummary, setProductStockSummary] = useState([]);
+  const [categoryTotals, setCategoryTotals] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const today = new Date().toISOString().split('T')[0];
@@ -57,7 +59,11 @@ const SalesItems = () => {
       if (toDate) params.endDate = toDate;
 
       const response = await axios.get('/api/reports/sales-items', { params });
-      setSalesData(response.data);
+      const data = response.data;
+      // API returns { categories, productStockSummary, categoryTotals } or legacy array
+      setSalesData(Array.isArray(data) ? data : data.categories || []);
+      setProductStockSummary(Array.isArray(data) ? [] : (data.productStockSummary || []));
+      setCategoryTotals(Array.isArray(data) ? [] : (data.categoryTotals || []));
     } catch (err) {
       setError('Failed to fetch sales items');
       console.error(err);
@@ -225,6 +231,55 @@ const SalesItems = () => {
             </Card>
           </Grid>
         </Grid>
+      )}
+
+      {/* Stock & sold per product: Beginning, Sold, Remaining */}
+      {!loading && productStockSummary.length > 0 && (
+        <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mb: 3 }}>
+          <Typography variant="h6" mb={2}>
+            Stock & sold per product
+          </Typography>
+          <TableContainer>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Product</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }} align="right">Beginning stocks</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }} align="right">Sold</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }} align="right">Remaining stocks</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {productStockSummary.map((row) => (
+                  <TableRow key={row.productId} hover>
+                    <TableCell>{row.productName}</TableCell>
+                    <TableCell>{row.categoryName}</TableCell>
+                    <TableCell align="right">{row.beginningStock}</TableCell>
+                    <TableCell align="right">{row.soldInPeriod}</TableCell>
+                    <TableCell align="right">{row.remainingStock}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
+
+      {/* Total number of products sold per category */}
+      {!loading && categoryTotals.length > 0 && (
+        <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mb: 3 }}>
+          <Typography variant="h6" mb={2}>
+            Total number of products sold per category
+          </Typography>
+          <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+            {categoryTotals.map((cat) => (
+              <Typography key={cat.categoryName} component="li" sx={{ py: 0.5 }}>
+                <strong>{cat.categoryName}</strong> — {cat.totalSold}
+              </Typography>
+            ))}
+          </Box>
+        </Paper>
       )}
 
       {/* Bar Chart */}
