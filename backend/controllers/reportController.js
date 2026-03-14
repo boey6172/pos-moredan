@@ -5,51 +5,49 @@ const Category = require('../models/Category');
 const { Sequelize } = require('sequelize');
 const sequelize = require('../config/database');
 const { calculatePaymentMethodTotals } = require('../utils/paymentUtils');
+const { getDateStringInPH, getDayBoundsInPH, getWeekStartDateInPH } = require('../utils/phTime');
 
 exports.getSalesReport = async (req, res) => {
   try {
     const period = req.query.period || 'daily';
-    const { startDate, endDate } = req.query; // Example: ?startDate=2025-10-01&endDate=2025-10-14
+    const { startDate, endDate } = req.query;
 
+    // Use Philippine time day boundaries so "Jan 1–Jan 31" includes full days in PH (not UTC)
     const where = {};
     if (startDate && endDate) {
-      where.createdAt = { [Sequelize.Op.between]: [new Date(startDate), new Date(endDate)] };
+      where.createdAt = {
+        [Sequelize.Op.between]: [getDayBoundsInPH(startDate).start, getDayBoundsInPH(endDate).end]
+      };
     } else if (startDate) {
-      where.createdAt = { [Sequelize.Op.gte]: new Date(startDate) };
+      where.createdAt = { [Sequelize.Op.gte]: getDayBoundsInPH(startDate).start };
     } else if (endDate) {
-      where.createdAt = { [Sequelize.Op.lte]: new Date(endDate) };
+      where.createdAt = { [Sequelize.Op.lte]: getDayBoundsInPH(endDate).end };
     }
-    
-    let groupBy;
-    if (period === 'daily') groupBy = [Sequelize.fn('DATE', Sequelize.col('createdAt'))];
-    else if (period === 'weekly') groupBy = [Sequelize.fn('DATE_TRUNC', 'week', Sequelize.col('createdAt'))];
-    else if (period === 'monthly') groupBy = [Sequelize.fn('DATE_TRUNC', 'month', Sequelize.col('createdAt'))];
-    else return res.status(400).json({ message: 'Invalid period' });
 
-    // Get all transactions first to process payment methods
+    if (period !== 'daily' && period !== 'weekly' && period !== 'monthly') {
+      return res.status(400).json({ message: 'Invalid period' });
+    }
+
+    // Get all transactions in range (grouping done in PH time below)
     const transactions = await Transaction.findAll({
       attributes: ['id', 'total', 'mop', 'createdAt'],
       where,
       order: [['createdAt', 'ASC']]
     });
 
-    // Group transactions by period and calculate payment method totals
+    // Group by period in Philippine time so report matches local date (and SQL in Asia/Manila)
     const groupedData = {};
-    
     transactions.forEach(tx => {
       const txDate = new Date(tx.createdAt);
       let periodKey;
-      
       if (period === 'daily') {
-        periodKey = txDate.toISOString().split('T')[0];
+        periodKey = getDateStringInPH(txDate);
       } else if (period === 'weekly') {
-        const weekStart = new Date(txDate);
-        weekStart.setDate(txDate.getDate() - txDate.getDay());
-        periodKey = weekStart.toISOString().split('T')[0];
-      } else if (period === 'monthly') {
-        periodKey = `${txDate.getFullYear()}-${String(txDate.getMonth() + 1).padStart(2, '0')}`;
+        periodKey = getWeekStartDateInPH(txDate);
+      } else {
+        periodKey = getDateStringInPH(txDate).slice(0, 7); // YYYY-MM
       }
-      
+
       if (!groupedData[periodKey]) {
         groupedData[periodKey] = {
           period: periodKey,
@@ -67,13 +65,15 @@ exports.getSalesReport = async (req, res) => {
       groupedData[periodKey].totalSales += parseFloat(tx.total || 0);
     });
 
-    // Convert to array and format
-    const sales = Object.values(groupedData).map(item => ({
-      ...item,
-      cashSales: parseFloat(item.cashSales.toFixed(2)),
-      gcashSales: parseFloat(item.gcashSales.toFixed(2)),
-      totalSales: parseFloat(item.totalSales.toFixed(2))
-    }));
+    // Convert to array, sort by period, and format
+    const sales = Object.values(groupedData)
+      .sort((a, b) => a.period.localeCompare(b.period))
+      .map(item => ({
+        ...item,
+        cashSales: parseFloat(Number(item.cashSales).toFixed(2)),
+        gcashSales: parseFloat(Number(item.gcashSales).toFixed(2)),
+        totalSales: parseFloat(Number(item.totalSales).toFixed(2))
+      }));
 
     res.json(sales);
   } catch (err) {

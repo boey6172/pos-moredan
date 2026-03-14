@@ -31,7 +31,21 @@ function getDayBoundsInPH(date) {
   };
 }
 
+/**
+ * Get week start (Sunday) date string in Philippine time for a given moment.
+ * @param {Date} date - Any moment
+ * @returns {string} - e.g. "2025-01-12"
+ */
+function getWeekStartDateInPH(date) {
+  const dateStr = getDateStringInPH(date);
+  const phNoon = new Date(dateStr + 'T12:00:00.000+08:00');
+  const dayOfWeek = phNoon.getUTCDay();
+  const weekStart = new Date(phNoon.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+  return getDateStringInPH(weekStart);
+}
+
 module.exports = {
   getDateStringInPH,
   getDayBoundsInPH,
+  getWeekStartDateInPH,
 };
