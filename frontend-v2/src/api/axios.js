@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const instance = axios.create({
   // baseURL: process.env.REACT_APP_API_BASE_URL || 'https://yggdrasilsolution.com/backend_pos',
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'https://yggdrasilsolution.com/pidols_bakery_backend',
+  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000',
 });
 
 // Login path respects deployed base path (e.g. /pidolsbakery/login)

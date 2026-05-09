@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,21 +8,70 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Box,
 } from '@mui/material';
+import { computeChangeDue, formatCurrency } from '../utils/helpers';
 
-const CheckoutDialog = ({ open, onClose, total, onConfirm, status, loading }) => {
-  const formatCurrency = (amount) => {
-    return `₱${(parseFloat(amount) || 0).toFixed(2)}`;
-  };
+const CheckoutDialog = ({
+  open,
+  onClose,
+  total,
+  onConfirm,
+  status,
+  loading,
+  paymentMethod,
+  isMultiPayment,
+  cashTendered,
+}) => {
+  const cashSummary = useMemo(() => {
+    if (isMultiPayment || paymentMethod !== 'Cash') return null;
+    const tender = parseFloat(String(cashTendered).trim());
+    if (!Number.isFinite(tender)) return null;
+    const change = computeChangeDue(tender, total);
+    return { tender, change };
+  }, [isMultiPayment, paymentMethod, cashTendered, total]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>Checkout</DialogTitle>
+      <DialogTitle>Confirm checkout</DialogTitle>
       <DialogContent>
-        <Typography>Are you sure you want to checkout?</Typography>
-        <Typography mt={2} variant="h6">
-          Total: {formatCurrency(total)}
+        <Typography color="text.secondary">
+          Complete this sale and print the receipt when you&apos;re ready.
         </Typography>
+        <Typography mt={2} variant="h6" component="p">
+          Total due: {formatCurrency(total)}
+        </Typography>
+        {cashSummary && (
+          <Box
+            sx={{
+              mt: 2,
+              p: 1.5,
+              borderRadius: 1,
+              bgcolor: 'action.hover',
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              Customer paid
+            </Typography>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {formatCurrency(cashSummary.tender)}
+            </Typography>
+            {cashSummary.change > 0 ? (
+              <>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Give back as change
+                </Typography>
+                <Typography variant="h6" color="success.main" fontWeight={700}>
+                  {formatCurrency(cashSummary.change)}
+                </Typography>
+              </>
+            ) : (
+              <Typography variant="body2" sx={{ mt: 1 }} color="success.dark">
+                No change — exact amount.
+              </Typography>
+            )}
+          </Box>
+        )}
         {status && (
           <Alert
             severity={status === 'success' ? 'success' : 'error'}
@@ -43,7 +92,7 @@ const CheckoutDialog = ({ open, onClose, total, onConfirm, status, loading }) =>
               Processing...
             </>
           ) : (
-            'Confirm'
+            'Confirm sale'
           )}
         </Button>
       </DialogActions>
@@ -52,9 +101,3 @@ const CheckoutDialog = ({ open, onClose, total, onConfirm, status, loading }) =>
 };
 
 export default CheckoutDialog;
-
-
-
-
-
-

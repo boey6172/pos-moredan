@@ -1,49 +1,65 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Product = require('./Product');
-const Transaction = require('./Transaction');
+const Material = require('./Material');
 const User = require('./User');
 
-const InventoryMovement = sequelize.define('InventoryMovement', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
+const InventoryMovement = sequelize.define(
+  'InventoryMovement',
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    materialId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: 'Materials', key: 'id' },
+    },
+    movementType: {
+      type: DataTypes.ENUM(
+        'IN_PURCHASE',
+        'IN_PRODUCTION',
+        'IN_ADJUSTMENT',
+        'OUT_SALE',
+        'OUT_PRODUCTION',
+        'OUT_WASTE',
+        'OUT_ADJUSTMENT',
+        'TRANSFER'
+      ),
+      allowNull: false,
+    },
+    quantityDeltaBase: {
+      type: DataTypes.BIGINT,
+      allowNull: false,
+    },
+    referenceType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    referenceId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: 'Users', key: 'id' },
+    },
   },
-  productId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: { model: 'Products', key: 'id' },
-  },
-  type: {
-    type: DataTypes.ENUM('in', 'out', 'transaction'),
-    allowNull: false,
-  },
-  quantity: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  reason: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  relatedTransactionId: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: { model: 'Transactions', key: 'id' },
-  },
-  userId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: { model: 'Users', key: 'id' },
-  },
-}, {
-  timestamps: true,
-  updatedAt: false,
-});
+  {
+    indexes: [
+      { fields: ['materialId'] },
+      { fields: ['referenceType', 'referenceId'] },
+    ],
+  }
+);
 
-InventoryMovement.belongsTo(Product, { foreignKey: 'productId' });
-InventoryMovement.belongsTo(Transaction, { foreignKey: 'relatedTransactionId' });
-InventoryMovement.belongsTo(User, { foreignKey: 'userId' });
+InventoryMovement.belongsTo(Material, { foreignKey: 'materialId' });
+InventoryMovement.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-module.exports = InventoryMovement; 
+module.exports = InventoryMovement;

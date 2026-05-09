@@ -16,6 +16,14 @@ const DEFAULT_PERMISSIONS = [
   { code: 'categories.delete', name: 'Delete Categories', description: 'Delete categories' },
   { code: 'inventory.view', name: 'View Inventory', description: 'View inventory' },
   { code: 'inventory.adjust', name: 'Adjust Inventory', description: 'Adjust stock levels' },
+  { code: 'raw-materials.view', name: 'View Raw Materials', description: 'View coffee shop ingredients stock' },
+  { code: 'raw-materials.create', name: 'Create Raw Materials', description: 'Create ingredients' },
+  { code: 'raw-materials.update', name: 'Update Raw Materials', description: 'Edit ingredients and stock' },
+  { code: 'raw-materials.delete', name: 'Delete Raw Materials', description: 'Delete ingredients' },
+  { code: 'units.view', name: 'View Units', description: 'View units of measure' },
+  { code: 'units.create', name: 'Create Units', description: 'Create units of measure' },
+  { code: 'units.update', name: 'Update Units', description: 'Edit units of measure' },
+  { code: 'units.delete', name: 'Delete Units', description: 'Delete units of measure' },
   { code: 'transactions.view', name: 'View Transactions', description: 'View transactions' },
   { code: 'transactions.create', name: 'Create Transactions', description: 'Create sales' },
   { code: 'transactions.update', name: 'Update Transactions', description: 'Edit transactions' },
@@ -50,7 +58,10 @@ const DEFAULT_PERMISSIONS = [
 
 const CASHIER_PERMISSION_CODES = [
   'dashboard.view', 'pos.use', 'products.view', 'categories.view',
-  'inventory.view', 'transactions.view', 'transactions.create',
+  'inventory.view', 'inventory.adjust',
+  'raw-materials.view', 'raw-materials.create', 'raw-materials.update', 'raw-materials.delete',
+  'units.view', 'units.create', 'units.update', 'units.delete',
+  'transactions.view', 'transactions.create',
   'sales-items.view', 'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete',
   'reports.view', 'reconciliation.view', 'reconciliation.close',
   'starting-cash.view', 'starting-cash.create', 'starting-cash.update', 'starting-cash.delete',
@@ -68,11 +79,31 @@ async function ensureRoleIdColumn() {
   console.log('RBAC seed: added roleId column to Users table');
 }
 
-async function runRbacSeed() {
+/** Upsert permission rows so new codes added in code deploy to existing databases. */
+async function ensurePermissionRows() {
+  for (const p of DEFAULT_PERMISSIONS) {
+    const [row, created] = await Permission.findOrCreate({
+      where: { code: p.code },
+      defaults: { name: p.name, description: p.description },
+    });
+    if (!created && (row.name !== p.name || row.description !== p.description)) {
+      await row.update({ name: p.name, description: p.description });
+    }
+  }
+}
+
+/**
+ * Keeps Permission rows and Admin/Cashier roles aligned with DEFAULT_PERMISSIONS / CASHIER_PERMISSION_CODES.
+ * Safe to run on every server start (idempotent).
+ */
+async function syncRolesAndPermissions({ verbose = false } = {}) {
   const perms = await Permission.findAll();
   if (perms.length === 0) {
     await Permission.bulkCreate(DEFAULT_PERMISSIONS);
-    console.log('RBAC seed: created default permissions');
+    if (verbose) console.log('RBAC seed: created default permissions');
+  } else {
+    await ensurePermissionRows();
+    if (verbose) console.log('RBAC seed: ensured permission rows are up to date');
   }
 
   let adminRole = await Role.findOne({ where: { name: 'Admin' } });
@@ -80,7 +111,10 @@ async function runRbacSeed() {
     adminRole = await Role.create({ name: 'Admin', description: 'Full access' });
     const allPerms = await Permission.findAll();
     await adminRole.setPermissions(allPerms);
-    console.log('RBAC seed: created Admin role with all permissions');
+    if (verbose) console.log('RBAC seed: created Admin role with all permissions');
+  } else {
+    const allPerms = await Permission.findAll();
+    await adminRole.setPermissions(allPerms);
   }
 
   let cashierRole = await Role.findOne({ where: { name: 'Cashier' } });
@@ -88,8 +122,23 @@ async function runRbacSeed() {
     cashierRole = await Role.create({ name: 'Cashier', description: 'POS and basic operations' });
     const cashierPerms = await Permission.findAll({ where: { code: CASHIER_PERMISSION_CODES } });
     await cashierRole.setPermissions(cashierPerms);
-    console.log('RBAC seed: created Cashier role');
+    if (verbose) console.log('RBAC seed: created Cashier role');
+  } else {
+    const cashierPerms = await Permission.findAll({ where: { code: CASHIER_PERMISSION_CODES } });
+    const existing = await cashierRole.getPermissions();
+    const existingIds = new Set(existing.map((p) => p.id));
+    const toAdd = cashierPerms.filter((p) => !existingIds.has(p.id));
+    if (toAdd.length) {
+      await cashierRole.addPermissions(toAdd);
+      if (verbose) console.log('RBAC seed: added', toAdd.length, 'permission(s) to Cashier role');
+    }
   }
+
+  return { adminRole, cashierRole };
+}
+
+async function runRbacSeed() {
+  const { adminRole, cashierRole } = await syncRolesAndPermissions({ verbose: true });
 
   // Ensure Users table has roleId column (migration for existing DBs)
   await ensureRoleIdColumn();
@@ -106,4 +155,9 @@ async function runRbacSeed() {
   if (users.length > 0) console.log('RBAC seed: migrated', users.length, 'users to roleId');
 }
 
-module.exports = { runRbacSeed, DEFAULT_PERMISSIONS, CASHIER_PERMISSION_CODES };
+module.exports = {
+  runRbacSeed,
+  syncRolesAndPermissions,
+  DEFAULT_PERMISSIONS,
+  CASHIER_PERMISSION_CODES,
+};

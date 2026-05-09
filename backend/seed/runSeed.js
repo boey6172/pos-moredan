@@ -8,14 +8,32 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 process.env.SEED = '1';
 const sequelize = require('../config/database');
 
-// Load models so tables exist
+// Load models so tables exist (order: dependencies before dependents)
 require('../models/Permission');
 require('../models/Role');
 require('../models/User');
+require('../models/Expense');
+require('../models/ExpenseType');
+require('../models/Employee');
+require('../models/Salary');
+require('../models/RawMaterial');
+require('../models/Unit');
+require('../models/UnitConversion');
+require('../models/Material');
+require('../models/BomHeader');
+require('../models/BomLine');
+require('../models/InventoryMovement');
+require('../models/InventorySettings');
+// Product: materialId, materialQuantityPerUnit, materialDeductionMode (requires Category + Material)
+require('../models/Product');
 
 const { runRbacSeed } = require('./rbacSeed');
+const { ensureSchemaPatches } = require('../utils/ensureSchemaPatches');
 
-sequelize.sync()
+sequelize
+  .authenticate()
+  .then(() => ensureSchemaPatches(sequelize))
+  .then(() => sequelize.sync())
   .then(() => runRbacSeed())
   .then(() => {
     console.log('Seed completed.');

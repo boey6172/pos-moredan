@@ -11,6 +11,9 @@ import Permissions from './pages/Permissions';
 import Roles from './pages/Roles';
 import Categories from './pages/Categories';
 import Inventory from './pages/Inventory/index';
+import RawMaterials from './pages/RawMaterials';
+import InventorySettings from './pages/InventorySettings';
+import Units from './pages/Units';
 import Expenses from './pages/Expenses';
 import Salaries from './pages/Salaries';
 import SalesItems from './pages/SalesItems';
@@ -115,6 +118,42 @@ function AppRoutes() {
               <Route
                 path="/inventory"
                 element={auth ? <Inventory /> : <Navigate to="/login" replace />}
+              />
+              <Route
+                path="/inventory-settings"
+                element={
+                  auth && (auth.user?.role === 'admin' || hasPermission?.('inventory.adjust')) ? (
+                    <InventorySettings />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/units"
+                element={
+                  auth && (auth.user?.role === 'admin' || hasPermission?.('units.view')) ? (
+                    <Units />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/raw-materials"
+                element={
+                  auth && (auth.user?.role === 'admin' || hasPermission?.('raw-materials.view')) ? (
+                    <RawMaterials />
+                  ) : auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
               />
               <Route
                 path="/expenses"

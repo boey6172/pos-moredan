@@ -233,11 +233,15 @@ const SalesItems = () => {
         </Grid>
       )}
 
-      {/* Stock & sold per product: Beginning, Sold, Remaining */}
+      {/* Stock & sold per product: Beginning, inventory in/out, Sold, Remaining */}
       {!loading && productStockSummary.length > 0 && (
         <Paper sx={{ p: { xs: 1.5, sm: 2, md: 3 }, mb: 3 }}>
           <Typography variant="h6" mb={2}>
             Stock & sold per product
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Stock in / Stock out are manual inventory adjustments in this period. Beginning stock is computed as:
+            remaining + sold + stock out − stock in.
           </Typography>
           <TableContainer>
             <Table size="small" stickyHeader>
@@ -246,6 +250,8 @@ const SalesItems = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>Product</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Category</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }} align="right">Beginning stocks</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }} align="right">Stock in</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }} align="right">Stock out</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }} align="right">Sold</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }} align="right">Remaining stocks</TableCell>
                 </TableRow>
@@ -256,6 +262,8 @@ const SalesItems = () => {
                     <TableCell>{row.productName}</TableCell>
                     <TableCell>{row.categoryName}</TableCell>
                     <TableCell align="right">{row.beginningStock}</TableCell>
+                    <TableCell align="right">{row.stockIn ?? 0}</TableCell>
+                    <TableCell align="right">{row.stockOut ?? 0}</TableCell>
                     <TableCell align="right">{row.soldInPeriod}</TableCell>
                     <TableCell align="right">{row.remainingStock}</TableCell>
                   </TableRow>

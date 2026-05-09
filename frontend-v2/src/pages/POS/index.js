@@ -29,7 +29,14 @@ import CheckoutDialog from './components/CheckoutDialog';
 import ReceiptDialog from './components/ReceiptDialog';
 import SnackbarNotification from './components/SnackbarNotification';
 import { CATEGORY_ORDER } from './utils/constants';
-import { groupProductsByCategory, calculateSubtotal, calculateTotal, handlePrintReceipt } from './utils/helpers';
+import {
+  groupProductsByCategory,
+  calculateSubtotal,
+  calculateTotal,
+  handlePrintReceipt,
+  computeChangeDue,
+  roundMoney,
+} from './utils/helpers';
 
 const POS = () => {
   const [products, setProducts] = useState([]);
@@ -46,6 +53,7 @@ const POS = () => {
   const [payments, setPayments] = useState([]);
   const [isMultiPayment, setIsMultiPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [cashTendered, setCashTendered] = useState('');
   const [discount, setDiscount] = useState(0);
   const [showDiscount, setShowDiscount] = useState(false);
   const [addedToCartProductId, setAddedToCartProductId] = useState(null);
@@ -132,6 +140,12 @@ const POS = () => {
   const subtotal = useMemo(() => calculateSubtotal(cart), [cart]);
   const total = useMemo(() => calculateTotal(subtotal, discount), [subtotal, discount]);
 
+  useEffect(() => {
+    if (isMultiPayment || paymentMethod !== 'Cash') {
+      setCashTendered('');
+    }
+  }, [isMultiPayment, paymentMethod]);
+
   const addToCart = useCallback(
     (product) => {
       if (!product.inventory || product.inventory <= 0) {
@@ -206,6 +220,13 @@ const POS = () => {
         setCheckoutStatus('Please select a payment method.');
         return;
       }
+      if (paymentMethod === 'Cash') {
+        const tender = parseFloat(String(cashTendered).trim());
+        if (!Number.isFinite(tender) || tender < roundMoney(total) - 0.001) {
+          setCheckoutStatus('Cash received is less than the total. Please enter how much the customer paid.');
+          return;
+        }
+      }
       finalPayments = [{ method: paymentMethod, amount: total }];
       mopString = JSON.stringify(finalPayments);
     }
@@ -225,6 +246,15 @@ const POS = () => {
       });
 
       setCheckoutStatus('success');
+      const tenderNum =
+        !isMultiPayment && paymentMethod === 'Cash'
+          ? parseFloat(String(cashTendered).trim())
+          : NaN;
+      const changeForReceipt =
+        Number.isFinite(tenderNum) && paymentMethod === 'Cash'
+          ? computeChangeDue(tenderNum, total)
+          : undefined;
+
       setLastReceipt({
         items: cart,
         subtotal,
@@ -233,6 +263,9 @@ const POS = () => {
         date: new Date().toLocaleString(),
         transactionId: res.data.transactionId || res.data.id || 'N/A',
         payments: finalPayments,
+        cashReceived: Number.isFinite(tenderNum) ? tenderNum : undefined,
+        changeDue: changeForReceipt,
+        customerName: customerName.trim() || undefined,
       });
 
       setCart([]);
@@ -242,6 +275,7 @@ const POS = () => {
       setShowDiscount(false);
       setIsMultiPayment(false);
       setPaymentMethod('Cash');
+      setCashTendered('');
       setDrawerOpen(false);
       setCheckoutOpen(false);
       setReceiptOpen(true);
@@ -252,7 +286,18 @@ const POS = () => {
     } finally {
       setCheckoutLoading(false);
     }
-  }, [cart, payments, paymentMethod, isMultiPayment, customerName, total, discount, subtotal, checkoutLoading]);
+  }, [
+    cart,
+    payments,
+    paymentMethod,
+    isMultiPayment,
+    customerName,
+    total,
+    discount,
+    subtotal,
+    checkoutLoading,
+    cashTendered,
+  ]);
 
   const handleReceiptClose = useCallback(() => {
     setReceiptOpen(false);
@@ -397,6 +442,8 @@ const POS = () => {
         setIsMultiPayment={setIsMultiPayment}
         paymentMethod={paymentMethod}
         setPaymentMethod={setPaymentMethod}
+        cashTendered={cashTendered}
+        setCashTendered={setCashTendered}
       />
 
       <Fab
@@ -414,7 +461,7 @@ const POS = () => {
         name={customerName}
         setName={setCustomerName}
         onProceed={handleCustomerNameSubmit}
-        onCancel={() => (window.location.href = '/pidolsbakery/dashboard')}
+        onCancel={() => (window.location.href = '/unohub/dashboard')}
       />
 
       <CheckoutDialog
@@ -424,6 +471,9 @@ const POS = () => {
         onConfirm={handleCheckout}
         status={checkoutStatus}
         loading={checkoutLoading}
+        paymentMethod={paymentMethod}
+        isMultiPayment={isMultiPayment}
+        cashTendered={cashTendered}
       />
 
       <ReceiptDialog

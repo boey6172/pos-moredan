@@ -12,10 +12,25 @@ const primaryOrange = {
   contrastText: '#ffffff',
 };
 
+// Alternate brand blue
+const primaryBlue = {
+  main: 'rgb(25, 118, 210)',   // #1976d2 – top bar & selected item
+  light: 'rgb(66, 165, 245)',  // #42a5f5
+  dark: 'rgb(13, 71, 161)',    // #0d47a1 – hover on selected
+  contrastText: '#ffffff',
+};
+
+const PRIMARY_BY_COLOR = {
+  orange: primaryOrange,
+  blue: primaryBlue,
+};
+
+const SUPPORTED_COLORS = Object.keys(PRIMARY_BY_COLOR);
+
 // Eye-friendly color palettes
-const lightPalette = {
+const buildLightPalette = (primary) => ({
   mode: 'light',
-  primary: primaryOrange,
+  primary,
   secondary: {
     main: '#9c27b0', // Purple accent
     light: '#ba68c8',
@@ -51,11 +66,11 @@ const lightPalette = {
     dark: '#1b5e20',
   },
   divider: 'rgba(0, 0, 0, 0.08)',
-};
+});
 
-const darkPalette = {
+const buildDarkPalette = (primary) => ({
   mode: 'dark',
-  primary: primaryOrange,
+  primary,
   secondary: {
     main: '#ce93d8', // Softer purple
     light: '#f3e5f5',
@@ -91,7 +106,7 @@ const darkPalette = {
     dark: '#388e3c',
   },
   divider: 'rgba(255, 255, 255, 0.12)',
-};
+});
 
 export const ThemeProvider = ({ children }) => {
   // Check system preference and localStorage
@@ -99,6 +114,12 @@ export const ThemeProvider = ({ children }) => {
     const savedMode = localStorage.getItem('themeMode');
     if (savedMode) return savedMode;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  // Brand color (orange | blue), persisted; defaults to orange to match legacy look.
+  const [color, setColorState] = useState(() => {
+    const saved = localStorage.getItem('themeColor');
+    return saved && SUPPORTED_COLORS.includes(saved) ? saved : 'orange';
   });
 
   // Listen to system preference changes
@@ -120,8 +141,19 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('themeMode', newMode);
   };
 
+  const setColor = (next) => {
+    if (!SUPPORTED_COLORS.includes(next)) return;
+    setColorState(next);
+    localStorage.setItem('themeColor', next);
+  };
+
+  const toggleColor = () => {
+    setColor(color === 'orange' ? 'blue' : 'orange');
+  };
+
   const theme = useMemo(() => {
-    const palette = mode === 'dark' ? darkPalette : lightPalette;
+    const primary = PRIMARY_BY_COLOR[color] || primaryOrange;
+    const palette = mode === 'dark' ? buildDarkPalette(primary) : buildLightPalette(primary);
     
     return createTheme({
       palette,
@@ -222,10 +254,19 @@ export const ThemeProvider = ({ children }) => {
         },
       },
     });
-  }, [mode]);
+  }, [mode, color]);
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleMode }}>
+    <ThemeContext.Provider
+      value={{
+        mode,
+        toggleMode,
+        color,
+        toggleColor,
+        setColor,
+        availableColors: SUPPORTED_COLORS,
+      }}
+    >
       <MUIThemeProvider theme={theme}>
         <CssBaseline />
         {children}

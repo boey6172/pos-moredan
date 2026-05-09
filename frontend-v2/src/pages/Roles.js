@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -22,12 +22,44 @@ import {
   FormControlLabel,
   Checkbox,
   Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Divider,
+  Stack,
 } from '@mui/material';
 import TableSkeleton from '../components/TableSkeleton';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axios from '../api/axios';
+
+const formatCategoryLabel = (key) => {
+  if (!key) return 'Other';
+  return key
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+};
+
+const groupPermissionsByCategory = (permissions) => {
+  const groups = new Map();
+  permissions.forEach((p) => {
+    const code = p.code || '';
+    const dotIdx = code.indexOf('.');
+    const category = dotIdx === -1 ? 'other' : code.slice(0, dotIdx);
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(p);
+  });
+  return Array.from(groups.entries())
+    .map(([key, perms]) => ({
+      key,
+      label: formatCategoryLabel(key),
+      permissions: perms.slice().sort((a, b) => a.code.localeCompare(b.code)),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
 
 const Roles = () => {
   const [roles, setRoles] = useState([]);
@@ -92,6 +124,35 @@ const Roles = () => {
         : [...prev.permissionIds, id],
     }));
   };
+
+  const groupedPermissions = useMemo(
+    () => groupPermissionsByCategory(permissions),
+    [permissions]
+  );
+
+  const toggleCategory = (categoryPermissionIds, allSelected) => {
+    setForm((prev) => {
+      const set = new Set(prev.permissionIds);
+      if (allSelected) {
+        categoryPermissionIds.forEach((id) => set.delete(id));
+      } else {
+        categoryPermissionIds.forEach((id) => set.add(id));
+      }
+      return { ...prev, permissionIds: Array.from(set) };
+    });
+  };
+
+  const toggleAllPermissions = (allSelected) => {
+    setForm((prev) => ({
+      ...prev,
+      permissionIds: allSelected ? [] : permissions.map((p) => p.id),
+    }));
+  };
+
+  const totalPermissions = permissions.length;
+  const selectedCount = form.permissionIds.length;
+  const allSelected = totalPermissions > 0 && selectedCount === totalPermissions;
+  const someSelected = selectedCount > 0 && selectedCount < totalPermissions;
 
   const handleSave = async () => {
     if (saving) return;
@@ -210,22 +271,129 @@ const Roles = () => {
             fullWidth
             margin="normal"
           />
-          <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>Permissions</Typography>
-          <Box sx={{ maxHeight: 320, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1, p: 1 }}>
-            <FormGroup>
-              {permissions.map((p) => (
-                <FormControlLabel
-                  key={p.id}
-                  control={
-                    <Checkbox
-                      checked={form.permissionIds.includes(p.id)}
-                      onChange={() => togglePermission(p.id)}
-                    />
-                  }
-                  label={<><code>{p.code}</code> — {p.name}</>}
-                />
-              ))}
-            </FormGroup>
+          <Box
+            sx={{
+              mt: 2,
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1,
+            }}
+          >
+            <Typography variant="subtitle2">Permissions</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {selectedCount} of {totalPermissions} selected
+            </Typography>
+          </Box>
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
+            <Box sx={{ px: 1.5, py: 0.5, bgcolor: 'action.hover', borderTopLeftRadius: 4, borderTopRightRadius: 4 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={someSelected}
+                    onChange={() => toggleAllPermissions(allSelected)}
+                    disabled={totalPermissions === 0}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Select All Permissions
+                  </Typography>
+                }
+              />
+            </Box>
+            <Divider />
+            <Box sx={{ maxHeight: 360, overflow: 'auto' }}>
+              {groupedPermissions.length === 0 ? (
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No permissions available.
+                  </Typography>
+                </Box>
+              ) : (
+                groupedPermissions.map((group) => {
+                  const groupIds = group.permissions.map((p) => p.id);
+                  const groupSelectedCount = groupIds.filter((id) =>
+                    form.permissionIds.includes(id)
+                  ).length;
+                  const groupAllSelected =
+                    groupIds.length > 0 && groupSelectedCount === groupIds.length;
+                  const groupSomeSelected =
+                    groupSelectedCount > 0 && groupSelectedCount < groupIds.length;
+                  return (
+                    <Accordion
+                      key={group.key}
+                      disableGutters
+                      defaultExpanded={false}
+                      sx={{
+                        boxShadow: 'none',
+                        '&:before': { display: 'none' },
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                        '&:last-of-type': { borderBottom: 0 },
+                      }}
+                    >
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{ px: 1.5 }}
+                      >
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{ width: '100%', pr: 1 }}
+                        >
+                          <FormControlLabel
+                            onClick={(e) => e.stopPropagation()}
+                            onFocus={(e) => e.stopPropagation()}
+                            control={
+                              <Checkbox
+                                checked={groupAllSelected}
+                                indeterminate={groupSomeSelected}
+                                onChange={() =>
+                                  toggleCategory(groupIds, groupAllSelected)
+                                }
+                              />
+                            }
+                            label={
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {group.label}
+                              </Typography>
+                            }
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {groupSelectedCount}/{groupIds.length}
+                          </Typography>
+                        </Stack>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ pt: 0, pl: 4, pr: 2 }}>
+                        <FormGroup>
+                          {group.permissions.map((p) => (
+                            <FormControlLabel
+                              key={p.id}
+                              control={
+                                <Checkbox
+                                  size="small"
+                                  checked={form.permissionIds.includes(p.id)}
+                                  onChange={() => togglePermission(p.id)}
+                                />
+                              }
+                              label={
+                                <Typography variant="body2">
+                                  <code>{p.code}</code> — {p.name}
+                                </Typography>
+                              }
+                            />
+                          ))}
+                        </FormGroup>
+                      </AccordionDetails>
+                    </Accordion>
+                  );
+                })
+              )}
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   Drawer,
   Box,
@@ -25,6 +25,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import MultiPaymentManager from './MultiPaymentManager';
 import SinglePaymentSelector from './SinglePaymentSelector';
+import { roundMoney } from '../utils/helpers';
 
 const CartDrawer = ({
   open,
@@ -45,18 +46,49 @@ const CartDrawer = ({
   setIsMultiPayment,
   paymentMethod,
   setPaymentMethod,
+  cashTendered,
+  setCashTendered,
 }) => {
+  const prevTotalRef = useRef(total);
+
+  useEffect(() => {
+    if (isMultiPayment || paymentMethod !== 'Cash') {
+      prevTotalRef.current = total;
+      return;
+    }
+    const prevT = prevTotalRef.current;
+    setCashTendered((prev) => {
+      const raw = String(prev).trim();
+      if (raw === '') return total > 0 ? total.toFixed(2) : '';
+      const p = parseFloat(raw);
+      const wasExact = Number.isFinite(p) && Math.abs(p - prevT) < 0.009;
+      if (wasExact) return total > 0 ? total.toFixed(2) : '';
+      return raw;
+    });
+    prevTotalRef.current = total;
+  }, [total, paymentMethod, isMultiPayment, setCashTendered]);
+
   const paidTotal = useMemo(() => {
     if (isMultiPayment) {
       return payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-    } else {
-      return paymentMethod ? total : 0;
     }
-  }, [payments, isMultiPayment, paymentMethod, total]);
+    if (!paymentMethod) return 0;
+    if (paymentMethod === 'Cash') {
+      const t = parseFloat(String(cashTendered).trim());
+      return Number.isFinite(t) ? t : 0;
+    }
+    return total;
+  }, [payments, isMultiPayment, paymentMethod, total, cashTendered]);
+
+  const cashSingleOk = useMemo(() => {
+    if (isMultiPayment || paymentMethod !== 'Cash') return true;
+    const t = parseFloat(String(cashTendered).trim());
+    return Number.isFinite(t) && t >= roundMoney(total) - 0.001;
+  }, [isMultiPayment, paymentMethod, cashTendered, total]);
 
   const canCheckout =
     cart.length > 0 &&
-    (isMultiPayment ? paidTotal >= total && payments.length > 0 : paymentMethod && paidTotal >= total);
+    (isMultiPayment ? paidTotal >= total && payments.length > 0 : Boolean(paymentMethod) && cashSingleOk);
 
   const formatCurrency = (amount) => {
     return `₱${(parseFloat(amount) || 0).toFixed(2)}`;
@@ -69,7 +101,7 @@ const CartDrawer = ({
       onClose={onClose}
       PaperProps={{
         sx: {
-          width: { xs: '100%', sm: 380 },
+          width: { xs: '100%', sm: 440, md: 520 },
           maxWidth: '100vw',
         },
       }}
@@ -284,6 +316,8 @@ const CartDrawer = ({
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
                 total={total}
+                cashTendered={cashTendered}
+                setCashTendered={setCashTendered}
               />
             )}
           </Box>

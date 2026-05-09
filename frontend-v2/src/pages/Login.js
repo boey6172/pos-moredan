@@ -88,7 +88,7 @@ const Login = () => {
             gutterBottom
             sx={{ fontWeight: 600, mb: 3, textAlign: 'center' }}
           >
-            Pidols Bakery 
+            Uno Laundry Hub
           </Typography>
           <Typography
             variant="body2"

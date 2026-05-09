@@ -21,10 +21,16 @@ const employeeRoutes = require('./routes/employee');
 const salaryRoutes = require('./routes/salary');
 const permissionRoutes = require('./routes/permission');
 const roleRoutes = require('./routes/role');
+const rawMaterialRoutes = require('./routes/rawMaterial');
+const unitRoutes = require('./routes/unit');
+const materialRoutes = require('./routes/material');
+const inventorySettingsRoutes = require('./routes/inventorySettings');
+const unitConversionRoutes = require('./routes/unitConversion');
+const inventoryMovementRoutes = require('./routes/inventoryMovement');
 const path = require('path');
 const sequelize = require('./config/database');
 const helmet = require('helmet');
-const BASE_PATH = '/pidols_bakery_backend'
+const BASE_PATH = ''
 // Ensure models are registered before sync (so tables are created)
 require('./models/Permission');
 require('./models/Role');
@@ -33,6 +39,15 @@ require('./models/Expense');
 require('./models/ExpenseType');
 require('./models/Employee');
 require('./models/Salary');
+require('./models/RawMaterial');
+require('./models/Unit');
+require('./models/UnitConversion');
+require('./models/Material');
+require('./models/BomHeader');
+require('./models/BomLine');
+require('./models/InventoryMovement');
+require('./models/InventorySettings');
+require('./models/Product');
 
 app.use(cors({
   origin: '*' // Replace with your frontend's origin
@@ -59,6 +74,12 @@ app.use(`${BASE_PATH}/api/employees`, employeeRoutes);
 app.use(`${BASE_PATH}/api/salaries`, salaryRoutes);
 app.use(`${BASE_PATH}/api/permissions`, permissionRoutes);
 app.use(`${BASE_PATH}/api/roles`, roleRoutes);
+app.use(`${BASE_PATH}/api/raw-materials`, rawMaterialRoutes);
+app.use(`${BASE_PATH}/api/materials`, materialRoutes);
+app.use(`${BASE_PATH}/api/inventory-settings`, inventorySettingsRoutes);
+app.use(`${BASE_PATH}/api/unit-conversions`, unitConversionRoutes);
+app.use(`${BASE_PATH}/api/inventory-movements`, inventoryMovementRoutes);
+app.use(`${BASE_PATH}/api/units`, unitRoutes);
 
 // Health/availability endpoints – always JSON so host panel checks get consistent Content-Type
 const healthPayload = { status: 'OK' };
@@ -74,7 +95,7 @@ app.get('/', sendJson);
 
 // Run RBAC seed from the running app (avoids "pthread_create" limit on shared hosting)
 // Supports GET and POST (some proxies only forward GET)
-const { runRbacSeed } = require('./seed/rbacSeed');
+const { runRbacSeed, syncRolesAndPermissions } = require('./seed/rbacSeed');
 const SEED_SECRET = process.env.SEED_SECRET;
 const handleSeed = (req, res) => {
   const key = req.query.key || req.headers['x-seed-key'];
@@ -97,7 +118,28 @@ app.post(`${BASE_PATH}/api/seed`, handleSeed);
     await sequelize.authenticate();
     console.log('Database connected');
 
+    const { ensureSchemaPatches } = require('./utils/ensureSchemaPatches');
+    try {
+      await ensureSchemaPatches(sequelize);
+    } catch (patchErr) {
+      console.error('Schema patch warning:', patchErr.message);
+    }
+
     await sequelize.sync();
+    try {
+      const { migrateRawMaterialsIfEmpty } = require('./services/legacyMaterialSync');
+      const { ensureSettingsRow } = require('./services/inventoryMaterialService');
+      const mig = await migrateRawMaterialsIfEmpty();
+      if (mig.migrated > 0) console.log('Legacy sync: migrated', mig.migrated, 'raw material(s) to Materials');
+      await ensureSettingsRow();
+    } catch (syncErr) {
+      console.error('Inventory legacy sync failed:', syncErr.message);
+    }
+    try {
+      await syncRolesAndPermissions({ verbose: false });
+    } catch (rbacErr) {
+      console.error('RBAC sync on startup failed:', rbacErr.message);
+    }
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server running on port ${PORT}`);
     });

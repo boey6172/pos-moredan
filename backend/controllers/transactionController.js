@@ -4,6 +4,7 @@ const Product = require('../models/Product');
 const User = require('../models/User');
 const { Sequelize } = require('sequelize');
 const { parsePaymentMethods } = require('../utils/paymentUtils');
+const { postSaleMaterialDeduction } = require('../services/inventoryMaterialService');
 
 /**
  * Validate payment methods and calculate total
@@ -98,6 +99,7 @@ exports.createTransaction = async (req, res) => {
       product.inventory -= item.quantity;
       await product.save({ transaction: t });
     }
+    await postSaleMaterialDeduction(transaction.id, items, req.user.id, t);
     await t.commit();
     
     // Return formatted payment info

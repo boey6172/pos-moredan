@@ -30,6 +30,7 @@ import axios from '../api/axios';
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [materials, setMaterials] = useState([]);
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState(null);
   const [form, setForm] = useState({
@@ -40,6 +41,9 @@ const Products = () => {
     categoryId: '',
     costToMake: '',
     image: null,
+    materialId: '',
+    materialQuantityPerUnit: '1',
+    materialDeductionMode: 'NONE',
   });
   const [categoryFilter, setCategoryFilter] = useState('');
   const [loading, setLoading] = useState(false);
@@ -73,17 +77,44 @@ const Products = () => {
     }
   };
 
+  const fetchMaterials = async () => {
+    try {
+      const res = await axios.get('/api/materials');
+      setMaterials(res.data || []);
+    } catch {
+      setMaterials([]);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    fetchMaterials();
   }, []);
 
   const handleOpen = (product = null) => {
     setEdit(product);
     setForm(
       product
-        ? { ...product, image: null }
-        : { name: '', price: '', sku: '', inventory: '', categoryId: '', costToMake: '', image: null }
+        ? {
+            ...product,
+            image: null,
+            materialId: product.materialId ?? '',
+            materialQuantityPerUnit: String(product.materialQuantityPerUnit ?? 1),
+            materialDeductionMode: product.materialDeductionMode || 'NONE',
+          }
+        : {
+            name: '',
+            price: '',
+            sku: '',
+            inventory: '',
+            categoryId: '',
+            costToMake: '',
+            image: null,
+            materialId: '',
+            materialQuantityPerUnit: '1',
+            materialDeductionMode: 'NONE',
+          }
     );
     setOpen(true);
   };
@@ -91,7 +122,18 @@ const Products = () => {
   const handleClose = () => {
     setOpen(false);
     setEdit(null);
-    setForm({ name: '', price: '', sku: '', inventory: '', categoryId: '', costToMake: '', image: null });
+    setForm({
+      name: '',
+      price: '',
+      sku: '',
+      inventory: '',
+      categoryId: '',
+      costToMake: '',
+      image: null,
+      materialId: '',
+      materialQuantityPerUnit: '1',
+      materialDeductionMode: 'NONE',
+    });
   };
 
   const handleSave = async () => {
@@ -100,10 +142,16 @@ const Products = () => {
     try {
       const data = new FormData();
       Object.entries(form).forEach(([k, v]) => {
+        if (k === 'image' || k === 'materialId' || k === 'materialQuantityPerUnit' || k === 'materialDeductionMode') {
+          return;
+        }
         if (v !== null && v !== undefined && v !== '') {
           data.append(k, v);
         }
       });
+      data.append('materialQuantityPerUnit', form.materialQuantityPerUnit || '1');
+      data.append('materialDeductionMode', form.materialDeductionMode || 'NONE');
+      data.append('materialId', form.materialId === '' || form.materialId == null ? '' : String(form.materialId));
 
       if (edit) {
         await axios.put(`/api/products/${edit.id}`, data, {
@@ -300,6 +348,45 @@ const Products = () => {
             margin="normal"
             inputProps={{ step: '0.01', min: '0' }}
           />
+          <TextField
+            select
+            label="Linked material (inventory / BOM)"
+            value={form.materialId === '' || form.materialId == null ? '' : form.materialId}
+            onChange={(e) => setForm({ ...form, materialId: e.target.value })}
+            fullWidth
+            margin="normal"
+            helperText="Optional. Link a unified material for recipe deduction on sale."
+          >
+            <MenuItem value="">None (POS stock only)</MenuItem>
+            {materials.map((m) => (
+              <MenuItem key={m.id} value={m.id}>
+                {m.name} ({m.materialType})
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Material base units per 1 product sold"
+            value={form.materialQuantityPerUnit}
+            onChange={(e) => setForm({ ...form, materialQuantityPerUnit: e.target.value })}
+            fullWidth
+            margin="normal"
+            type="number"
+            inputProps={{ min: '1' }}
+            helperText="In material base UOM (e.g. ml per cup). Use 1 for each/bottle SKUs."
+          />
+          <TextField
+            select
+            label="Material deduction mode"
+            value={form.materialDeductionMode}
+            onChange={(e) => setForm({ ...form, materialDeductionMode: e.target.value })}
+            fullWidth
+            margin="normal"
+          >
+            <MenuItem value="NONE">None — do not deduct materials</MenuItem>
+            <MenuItem value="MATERIAL_ONLY">Deduct linked material only (e.g. sell shots from stock)</MenuItem>
+            <MenuItem value="BOM_CONSUME">BOM: consume inputs (keep intermediates as lines)</MenuItem>
+            <MenuItem value="BOM_EXPLODE">BOM: explode to raw materials</MenuItem>
+          </TextField>
           <Button component="label" fullWidth sx={{ mt: 2 }}>
             Upload Image
             <input

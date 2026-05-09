@@ -24,7 +24,12 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
+  Collapse,
+  CardActionArea,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { DashboardSkeleton } from '../components/PageSkeleton';
 import {
   BarChart,
@@ -61,6 +66,19 @@ const Dashboard = () => {
   const [actualCash, setActualCash] = useState('');
   const [reconciliationNotes, setReconciliationNotes] = useState('');
   const [reconciling, setReconciling] = useState(false);
+
+  const muiTheme = useTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
+
+  const [paymentChartOpen, setPaymentChartOpen] = useState(true);
+  const [hourChartOpen, setHourChartOpen] = useState(true);
+
+  // On viewport changes, reset chart visibility so PC = expanded, mobile = collapsed.
+  // Runs only when crossing the breakpoint, not on every render.
+  useEffect(() => {
+    setPaymentChartOpen(!isMobile);
+    setHourChartOpen(!isMobile);
+  }, [isMobile]);
 
   const fetchData = async () => {
     try {
@@ -285,58 +303,92 @@ const Dashboard = () => {
             </Grid>
           )}
 
-          {/* Charts */}
+          {/* Charts — collapsible on mobile, fully expanded on desktop */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
             <Grid item xs={12} md={6}>
               <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                <CardActionArea
+                  onClick={() => setPaymentChartOpen((v) => !v)}
+                  aria-label={paymentChartOpen ? 'Collapse Sales by Payment Method' : 'Expand Sales by Payment Method'}
+                  aria-expanded={paymentChartOpen}
+                  sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <Typography variant="h6" sx={{ flex: 1 }}>
                     Sales by Payment Method
                   </Typography>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                      data={[
-                        { name: 'Cash', amount: metrics.today?.cashSales || 0 },
-                        { name: 'GCash', amount: metrics.today?.gcashSales || 0 },
-                        { name: 'Card', amount: metrics.today?.cardSales || 0 },
-                        { name: 'Other', amount: metrics.today?.otherSales || 0 },
-                      ]}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <RechartsTooltip formatter={(value) => formatCurrency(value)} />
-                      <Legend />
-                      <Bar dataKey="amount" fill="var(--mui-palette-primary-main)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
+                  <ExpandMoreIcon
+                    sx={{
+                      transform: paymentChartOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
+                </CardActionArea>
+                <Collapse in={paymentChartOpen} timeout="auto" unmountOnExit>
+                  <CardContent sx={{ pt: 0 }}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
+                      <BarChart
+                        data={[
+                          { name: 'Cash', amount: metrics.today?.cashSales || 0 },
+                          { name: 'GCash', amount: metrics.today?.gcashSales || 0 },
+                          { name: 'Card', amount: metrics.today?.cardSales || 0 },
+                          { name: 'Other', amount: metrics.today?.otherSales || 0 },
+                        ]}
+                        margin={isMobile ? { top: 8, right: 8, left: -16, bottom: 0 } : { top: 8, right: 16, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" tick={{ fontSize: isMobile ? 11 : 12 }} interval={0} />
+                        <YAxis tick={{ fontSize: isMobile ? 11 : 12 }} width={isMobile ? 40 : 60} />
+                        <RechartsTooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                        <Bar dataKey="amount" fill="var(--mui-palette-primary-main)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Collapse>
               </Card>
             </Grid>
 
             <Grid item xs={12} md={6}>
               <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
+                <CardActionArea
+                  onClick={() => setHourChartOpen((v) => !v)}
+                  aria-label={hourChartOpen ? 'Collapse Sales by Hour' : 'Expand Sales by Hour'}
+                  aria-expanded={hourChartOpen}
+                  sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <Typography variant="h6" sx={{ flex: 1 }}>
                     Sales by Hour
                   </Typography>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={metrics.salesByHour || []}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis />
-                      <RechartsTooltip formatter={(value) => formatCurrency(value)} />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="sales"
-                        stroke="var(--mui-palette-primary-main)"
-                        fill="var(--mui-palette-primary-main)"
-                        fillOpacity={0.6}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
+                  <ExpandMoreIcon
+                    sx={{
+                      transform: hourChartOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
+                </CardActionArea>
+                <Collapse in={hourChartOpen} timeout="auto" unmountOnExit>
+                  <CardContent sx={{ pt: 0 }}>
+                    <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
+                      <AreaChart
+                        data={metrics.salesByHour || []}
+                        margin={isMobile ? { top: 8, right: 8, left: -16, bottom: 0 } : { top: 8, right: 16, left: 0, bottom: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="hour" tick={{ fontSize: isMobile ? 11 : 12 }} />
+                        <YAxis tick={{ fontSize: isMobile ? 11 : 12 }} width={isMobile ? 40 : 60} />
+                        <RechartsTooltip formatter={(value) => formatCurrency(value)} />
+                        <Legend />
+                        <Area
+                          type="monotone"
+                          dataKey="sales"
+                          stroke="var(--mui-palette-primary-main)"
+                          fill="var(--mui-palette-primary-main)"
+                          fillOpacity={0.6}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Collapse>
               </Card>
             </Grid>
           </Grid>

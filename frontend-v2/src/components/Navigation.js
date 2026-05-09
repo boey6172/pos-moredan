@@ -20,6 +20,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import LocalCafeIcon from '@mui/icons-material/LocalCafe';
 import CategoryIcon from '@mui/icons-material/Category';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import AssessmentIcon from '@mui/icons-material/Assessment';
@@ -29,6 +30,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import SecurityIcon from '@mui/icons-material/Security';
+import PaletteIcon from '@mui/icons-material/Palette';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,16 +38,24 @@ import { useAuth } from '../contexts/AuthContext';
 const DRAWER_WIDTH = 280;
 
 const navItems = [
-  { label: 'Dashboard', path: '/dashboard', icon: DashboardIcon },
-  { label: 'POS', path: '/pos', icon: PointOfSaleIcon },
-  { label: 'Products', path: '/products', icon: InventoryIcon },
-  { label: 'Categories', path: '/categories', icon: CategoryIcon },
-  { label: 'Inventory', path: '/inventory', icon: InventoryIcon },
-  { label: 'Transactions', path: '/transactions', icon: ReceiptIcon },
-  { label: 'Sales Items', path: '/sales-items', icon: ReceiptIcon },
-  { label: 'Expenses', path: '/expenses', icon: ReceiptIcon },
+  { label: 'Dashboard', path: '/dashboard', icon: DashboardIcon, permission: 'dashboard.view' },
+  { label: 'POS', path: '/pos', icon: PointOfSaleIcon, permission: 'pos.use' },
+  { label: 'Products', path: '/products', icon: InventoryIcon, permission: 'products.view' },
+  { label: 'Categories', path: '/categories', icon: CategoryIcon, permission: 'categories.view' },
+  { label: 'Inventory', path: '/inventory', icon: InventoryIcon, permission: 'inventory.view' },
+  {
+    label: 'Inventory settings',
+    path: '/inventory-settings',
+    icon: InventoryIcon,
+    permission: 'inventory.adjust',
+  },
+  { label: 'Raw materials', path: '/raw-materials', icon: LocalCafeIcon, permission: 'raw-materials.view' },
+  { label: 'Units', path: '/units', icon: LocalCafeIcon, permission: 'units.view' },
+  { label: 'Transactions', path: '/transactions', icon: ReceiptIcon, permission: 'transactions.view' },
+  { label: 'Sales Items', path: '/sales-items', icon: ReceiptIcon, permission: 'sales-items.view' },
+  { label: 'Expenses', path: '/expenses', icon: ReceiptIcon, permission: 'expenses.view' },
   { label: 'Salary', path: '/salary', icon: AttachMoneyIcon, permission: 'salary.view' },
-  { label: 'Reports', path: '/reports', icon: AssessmentIcon },
+  { label: 'Reports', path: '/reports', icon: AssessmentIcon, permission: 'reports.view' },
   { label: 'Users', path: '/users', icon: PeopleIcon, permission: 'users.view' },
   { label: 'Permissions', path: '/permissions', icon: SecurityIcon, rbacOnly: true },
   { label: 'Roles', path: '/roles', icon: SecurityIcon, rbacOnly: true },
@@ -56,7 +66,7 @@ const Navigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  const { toggleMode, mode } = useCustomTheme();
+  const { toggleMode, mode, color, toggleColor } = useCustomTheme();
   const { logout, auth, hasPermission } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const canRbac = hasPermission?.('rbac.view') || hasPermission?.('rbac.manage');
@@ -96,8 +106,8 @@ const Navigation = () => {
       <List sx={{ flex: 1, px: 1, py: 2 }}>
         {navItems
           .filter((item) => {
-            if (item.permission && auth?.user?.role !== 'admin' && !hasPermission?.(item.permission)) return false;
-            if (item.rbacOnly && !canRbac) return false;
+            if (item.rbacOnly) return canRbac;
+            if (item.permission) return !!hasPermission?.(item.permission);
             return true;
           })
           .map((item) => {
@@ -200,6 +210,15 @@ const Navigation = () => {
                 {auth.user.username}
               </Typography>
             )}
+            <Tooltip title={`Switch to ${color === 'orange' ? 'blue' : 'orange'} theme`}>
+              <IconButton
+                onClick={toggleColor}
+                color="inherit"
+                aria-label={`Switch to ${color === 'orange' ? 'blue' : 'orange'} theme`}
+              >
+                <PaletteIcon />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}>
               <IconButton
                 onClick={toggleMode}
